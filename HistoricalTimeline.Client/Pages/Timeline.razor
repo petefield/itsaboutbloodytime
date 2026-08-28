@@ -32,7 +32,7 @@
                 @foreach (var placement in timelinePlacements)
                 {
                     <div class="timeline-range"
-                         style="@($"left: {placement.Left:F1}px; width: {placement.RangeWidth:F1}px;")"
+                         style="@($"left: {placement.Left:F1}px; width: {placement.RangeWidth:F1}px; --event-colour: {placement.Colour};")"
                          aria-hidden="true"></div>
                     <button class="timeline-event"
                             style="@PositionEvent(placement)"
@@ -83,6 +83,11 @@
     private const int LaneHeight = 260;
     private const int AxisClearance = 32;
     private const int MinimumTimelineWidth = 1_600;
+    private static readonly string[] EventColours =
+    [
+        "#0d6efd", "#198754", "#dc3545", "#6f42c1", "#fd7e14",
+        "#0dcaf0", "#d63384", "#20c997", "#795548", "#6c757d"
+    ];
     private List<HistoricalEvent>? events;
     private List<TimelinePlacement> timelinePlacements = [];
     private HistoricalEvent? selectedEvent;
@@ -140,7 +145,13 @@
                 laneEnds[lane] = left + EventCardWidth;
             }
 
-            timelinePlacements.Add(new TimelinePlacement(historicalEvent, above, lane, left, rangeWidth));
+            timelinePlacements.Add(new TimelinePlacement(
+                historicalEvent,
+                above,
+                lane,
+                left,
+                rangeWidth,
+                EventColours[index % EventColours.Length]));
         }
 
         timelineWidth = Math.Max(
@@ -156,7 +167,7 @@
             ? $"bottom: {timelineHeight / 2 + distanceFromAxis}px;"
             : $"top: {timelineHeight / 2 + distanceFromAxis}px;";
 
-        return $"left: {placement.Left:F1}px; {verticalPosition}";
+        return $"left: {placement.Left:F1}px; --event-colour: {placement.Colour}; {verticalPosition}";
     }
 
     private static string DisplayDateRange(HistoricalEvent historicalEvent) =>
@@ -171,5 +182,6 @@
         bool Above,
         int Lane,
         double Left,
-        double RangeWidth);
+        double RangeWidth,
+        string Colour);
 }
