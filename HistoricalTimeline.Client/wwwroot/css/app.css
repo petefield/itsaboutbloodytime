@@ -90,6 +90,13 @@ a, .btn-link {
     transform: scaleY(1.75);
 }
 
+.timeline-connector {
+    position: absolute;
+    z-index: 1;
+    width: 2px;
+    background: var(--event-colour);
+}
+
 .timeline-event {
     position: relative;
     z-index: 2;

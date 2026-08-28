@@ -34,6 +34,9 @@
                     <div class="timeline-range @(highlightedEventId == placement.Event.Id ? "timeline-range-highlighted" : null)"
                          style="@($"left: {placement.Left:F1}px; width: {placement.RangeWidth:F1}px; --event-colour: {placement.Colour};")"
                          aria-hidden="true"></div>
+                    <div class="timeline-connector"
+                         style="@PositionConnector(placement)"
+                         aria-hidden="true"></div>
                     <button class="timeline-event"
                             style="@PositionEvent(placement)"
                             @onmouseenter="() => HighlightEvent(placement.Event.Id)"
@@ -177,6 +180,16 @@
             : $"top: {timelineHeight / 2 + distanceFromAxis}px;";
 
         return $"left: {placement.Left:F1}px; --event-colour: {placement.Colour}; {verticalPosition}";
+    }
+
+    private string PositionConnector(TimelinePlacement placement)
+    {
+        var distanceFromAxis = AxisClearance + (placement.Lane * LaneHeight);
+        var verticalPosition = placement.Above
+            ? $"top: {timelineHeight / 2 - distanceFromAxis}px;"
+            : $"top: {timelineHeight / 2}px;";
+
+        return $"left: {placement.Left:F1}px; height: {distanceFromAxis}px; --event-colour: {placement.Colour}; {verticalPosition}";
     }
 
     private static string DisplayDateRange(HistoricalEvent historicalEvent) =>
