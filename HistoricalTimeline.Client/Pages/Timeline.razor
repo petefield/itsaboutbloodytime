@@ -27,21 +27,23 @@
     else
     {
         <div class="timeline-scroll">
-            <div class="timeline-track" style="@($"--event-count: {events.Count}")">
+            <div class="timeline-track" style="@($"width: {timelineWidth}px; min-height: {timelineHeight}px;")">
                 <div class="timeline-axis" aria-hidden="true"></div>
-                @for (var index = 0; index < events.Count; index++)
+                @foreach (var placement in timelinePlacements)
                 {
-                    var historicalEvent = events[index];
-                    <button class="timeline-event @(index % 2 == 0 ? "timeline-event-above" : "timeline-event-below")"
-                            style="@($"grid-column: {index + 1};")"
-                            @onclick="() => OpenDetails(historicalEvent)">
-                        @if (historicalEvent.ImageUrl is not null)
+                    <div class="timeline-range"
+                         style="@($"left: {placement.Left:F1}px; width: {placement.RangeWidth:F1}px;")"
+                         aria-hidden="true"></div>
+                    <button class="timeline-event"
+                            style="@PositionEvent(placement)"
+                            @onclick="() => OpenDetails(placement.Event)">
+                        @if (placement.Event.ImageUrl is not null)
                         {
-                            <img src="@ApiUrl(historicalEvent.ImageUrl)" alt="" class="timeline-thumbnail" />
+                            <img src="@ApiUrl(placement.Event.ImageUrl)" alt="" class="timeline-thumbnail" />
                         }
-                        <span class="timeline-date">@DisplayDateRange(historicalEvent)</span>
-                        <span class="timeline-title">@historicalEvent.Title</span>
-                        <span class="timeline-summary">@historicalEvent.Summary</span>
+                        <span class="timeline-date">@DisplayDateRange(placement.Event)</span>
+                        <span class="timeline-title">@placement.Event.Title</span>
+                        <span class="timeline-summary">@placement.Event.Summary</span>
                     </button>
                 }
             </div>
@@ -77,15 +79,23 @@
 }
 
 @code {
+    private const int EventCardWidth = 240;
+    private const int LaneHeight = 260;
+    private const int AxisClearance = 32;
+    private const int MinimumTimelineWidth = 1_600;
     private List<HistoricalEvent>? events;
+    private List<TimelinePlacement> timelinePlacements = [];
     private HistoricalEvent? selectedEvent;
     private string? loadError;
+    private int timelineWidth;
+    private int timelineHeight;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             events = await Http.GetFromJsonAsync<List<HistoricalEvent>>("api/historical-events") ?? [];
+            BuildTimelinePlacements();
         }
         catch (HttpRequestException)
         {
@@ -97,10 +107,69 @@
 
     private void CloseDetails() => selectedEvent = null;
 
+    private void BuildTimelinePlacements()
+    {
+        var orderedEvents = events!.OrderBy(historicalEvent => historicalEvent.StartDate).ToArray();
+        if (orderedEvents.Length == 0)
+        {
+            return;
+        }
+
+        var timelineStart = orderedEvents[0].StartDate;
+        var timelineEnd = orderedEvents.Max(historicalEvent => historicalEvent.EndDate);
+        var durationInDays = Math.Max(1, timelineEnd.DayNumber - timelineStart.DayNumber);
+        var pixelsPerDay = (double)MinimumTimelineWidth / durationInDays;
+        var aboveLaneEnds = new List<double>();
+        var belowLaneEnds = new List<double>();
+
+        foreach (var (historicalEvent, index) in orderedEvents.Select((historicalEvent, index) => (historicalEvent, index)))
+        {
+            var above = index % 2 == 0;
+            var left = (historicalEvent.StartDate.DayNumber - timelineStart.DayNumber) * pixelsPerDay;
+            var rangeWidth = Math.Max(4, (historicalEvent.EndDate.DayNumber - historicalEvent.StartDate.DayNumber) * pixelsPerDay);
+            var laneEnds = above ? aboveLaneEnds : belowLaneEnds;
+            var lane = laneEnds.FindIndex(end => end <= left);
+
+            if (lane < 0)
+            {
+                lane = laneEnds.Count;
+                laneEnds.Add(left + EventCardWidth);
+            }
+            else
+            {
+                laneEnds[lane] = left + EventCardWidth;
+            }
+
+            timelinePlacements.Add(new TimelinePlacement(historicalEvent, above, lane, left, rangeWidth));
+        }
+
+        timelineWidth = Math.Max(
+            MinimumTimelineWidth,
+            (int)Math.Ceiling(durationInDays * pixelsPerDay) + EventCardWidth);
+        timelineHeight = (aboveLaneEnds.Count + belowLaneEnds.Count) * LaneHeight + (AxisClearance * 2);
+    }
+
+    private string PositionEvent(TimelinePlacement placement)
+    {
+        var distanceFromAxis = AxisClearance + (placement.Lane * LaneHeight);
+        var verticalPosition = placement.Above
+            ? $"bottom: {timelineHeight / 2 + distanceFromAxis}px;"
+            : $"top: {timelineHeight / 2 + distanceFromAxis}px;";
+
+        return $"left: {placement.Left:F1}px; {verticalPosition}";
+    }
+
     private static string DisplayDateRange(HistoricalEvent historicalEvent) =>
         historicalEvent.StartDate == historicalEvent.EndDate
             ? historicalEvent.StartDate.ToString("d MMMM yyyy")
             : $"{historicalEvent.StartDate:d MMMM yyyy} - {historicalEvent.EndDate:d MMMM yyyy}";
 
     private string ApiUrl(string relativeUrl) => new Uri(Http.BaseAddress!, relativeUrl).ToString();
+
+    private sealed record TimelinePlacement(
+        HistoricalEvent Event,
+        bool Above,
+        int Lane,
+        double Left,
+        double RangeWidth);
 }
