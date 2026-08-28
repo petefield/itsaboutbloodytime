@@ -1,31 +1,11 @@
 using HistoricalTimeline.Api.Services;
-using Microsoft.Extensions.FileProviders;
+using Microsoft.Azure.Functions.Worker.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
-var builder = WebApplication.CreateBuilder(args);
-var webRootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
-Directory.CreateDirectory(webRootPath);
+var builder = FunctionsApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.ConfigureFunctionsWebApplication();
 builder.Services.AddSingleton<HistoricalEventStore>();
-builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
-    policy.WithOrigins("http://localhost:5256", "https://localhost:7130")
-        .AllowAnyHeader()
-        .AllowAnyMethod()));
 
-var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-app.UseHttpsRedirection();
-app.UseCors();
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(webRootPath)
-});
-app.UseAuthorization();
-app.MapControllers();
-app.Run();
+builder.Build().Run();

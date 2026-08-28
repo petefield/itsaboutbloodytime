@@ -1,34 +1,222 @@
-using System.Collections.Concurrent;
+using Azure;
+using Azure.Data.Tables;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using HistoricalTimeline.Api.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace HistoricalTimeline.Api.Services;
 
 public sealed class HistoricalEventStore
 {
-    private readonly ConcurrentDictionary<Guid, HistoricalEvent> events = new();
+    private const string PartitionKey = "events";
+    private readonly TableClient eventTable;
+    private readonly BlobContainerClient imageContainer;
+    private readonly SemaphoreSlim initializationLock = new(1, 1);
+    private bool initialized;
 
-    public HistoricalEventStore()
+    public HistoricalEventStore(IConfiguration configuration)
     {
-        foreach (var historicalEvent in SeedEvents)
+        var connectionString = configuration["StorageConnectionString"]
+            ?? throw new InvalidOperationException("StorageConnectionString must be configured.");
+
+        eventTable = new TableClient(connectionString, "HistoricalEvents");
+        imageContainer = new BlobContainerClient(connectionString, "event-images");
+    }
+
+    public async Task<IReadOnlyCollection<HistoricalEvent>> GetAllAsync()
+    {
+        await EnsureInitializedAsync();
+        var historicalEvents = new List<HistoricalEvent>();
+
+        await foreach (var entity in eventTable.QueryAsync<HistoricalEventEntity>(
+            entity => entity.PartitionKey == PartitionKey))
         {
-            events[historicalEvent.Id] = historicalEvent;
+            historicalEvents.Add(ToModel(entity));
+        }
+
+        return historicalEvents.OrderBy(historicalEvent => historicalEvent.StartDate).ToArray();
+    }
+
+    public async Task<HistoricalEvent?> GetAsync(Guid id)
+    {
+        await EnsureInitializedAsync();
+
+        try
+        {
+            var response = await eventTable.GetEntityAsync<HistoricalEventEntity>(PartitionKey, id.ToString("N"));
+            return ToModel(response.Value);
+        }
+        catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
+        {
+            return null;
         }
     }
 
-    public IReadOnlyCollection<HistoricalEvent> GetAll() =>
-        events.Values.OrderBy(item => item.StartDate).ToArray();
-
-    public HistoricalEvent? Get(Guid id) =>
-        events.TryGetValue(id, out var historicalEvent) ? historicalEvent : null;
-
-    public HistoricalEvent Add(HistoricalEvent historicalEvent)
+    public async Task<HistoricalEvent> AddAsync(HistoricalEvent historicalEvent)
     {
-        events[historicalEvent.Id] = historicalEvent;
-        return historicalEvent;
+        await EnsureInitializedAsync();
+        var entity = ToEntity(historicalEvent);
+        await eventTable.AddEntityAsync(entity);
+        return ToModel(entity);
     }
 
-    public bool Update(HistoricalEvent historicalEvent) =>
-        events.TryUpdate(historicalEvent.Id, historicalEvent, Get(historicalEvent.Id)!);
+    public async Task<bool> UpdateAsync(HistoricalEvent historicalEvent)
+    {
+        await EnsureInitializedAsync();
+
+        try
+        {
+            await eventTable.UpdateEntityAsync(ToEntity(historicalEvent), ETag.All, TableUpdateMode.Replace);
+            return true;
+        }
+        catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
+        {
+            return false;
+        }
+    }
+
+    public async Task<string> UploadImageAsync(IFormFile image)
+    {
+        var extension = ValidateImage(image);
+        await EnsureInitializedAsync();
+
+        var blobName = $"{Guid.NewGuid():N}{extension}";
+        var blobClient = imageContainer.GetBlobClient(blobName);
+        await using var imageStream = image.OpenReadStream();
+        await blobClient.UploadAsync(imageStream, new BlobUploadOptions
+        {
+            HttpHeaders = new BlobHttpHeaders { ContentType = image.ContentType }
+        });
+
+        return blobName;
+    }
+
+    public async Task<BlobDownloadStreamingResult?> DownloadImageAsync(string blobName)
+    {
+        await EnsureInitializedAsync();
+
+        try
+        {
+            return (await imageContainer.GetBlobClient(blobName).DownloadStreamingAsync()).Value;
+        }
+        catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
+        {
+            return null;
+        }
+    }
+
+    private async Task EnsureInitializedAsync()
+    {
+        if (initialized)
+        {
+            return;
+        }
+
+        await initializationLock.WaitAsync();
+        try
+        {
+            if (initialized)
+            {
+                return;
+            }
+
+            await eventTable.CreateIfNotExistsAsync();
+            await imageContainer.CreateIfNotExistsAsync(PublicAccessType.None);
+
+            var hasEvents = false;
+            await foreach (var _ in eventTable.QueryAsync<HistoricalEventEntity>(
+                entity => entity.PartitionKey == PartitionKey,
+                maxPerPage: 1))
+            {
+                hasEvents = true;
+                break;
+            }
+
+            if (!hasEvents)
+            {
+                foreach (var historicalEvent in SeedEvents)
+                {
+                    try
+                    {
+                        await eventTable.AddEntityAsync(ToEntity(historicalEvent));
+                    }
+                    catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status409Conflict)
+                    {
+                    }
+                }
+            }
+
+            initialized = true;
+        }
+        finally
+        {
+            initializationLock.Release();
+        }
+    }
+
+    private static HistoricalEventEntity ToEntity(HistoricalEvent historicalEvent) =>
+        new()
+        {
+            PartitionKey = PartitionKey,
+            RowKey = historicalEvent.Id.ToString("N"),
+            Title = historicalEvent.Title,
+            Summary = historicalEvent.Summary,
+            Description = historicalEvent.Description,
+            ImageBlobName = historicalEvent.ImageUrl is null
+                ? null
+                : Path.GetFileName(historicalEvent.ImageUrl),
+            StartDate = historicalEvent.StartDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
+            EndDate = historicalEvent.EndDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)
+        };
+
+    private static HistoricalEvent ToModel(HistoricalEventEntity entity) =>
+        new()
+        {
+            Id = Guid.ParseExact(entity.RowKey, "N"),
+            Title = entity.Title,
+            Summary = entity.Summary,
+            Description = entity.Description,
+            ImageUrl = entity.ImageBlobName is null
+                ? null
+                : $"/api/historical-events/images/{entity.ImageBlobName}",
+            StartDate = DateOnly.FromDateTime(entity.StartDate),
+            EndDate = DateOnly.FromDateTime(entity.EndDate)
+        };
+
+    private static string ValidateImage(IFormFile image)
+    {
+        const long maximumImageSize = 5 * 1024 * 1024;
+        var allowedImageTypes = new HashSet<string>
+        {
+            "image/jpeg", "image/png", "image/gif", "image/webp"
+        };
+        var allowedExtensions = new HashSet<string>
+        {
+            ".jpg", ".jpeg", ".png", ".gif", ".webp"
+        };
+
+        if (image.Length is 0 or > maximumImageSize)
+        {
+            throw new ImageValidationException("Images must be between 1 byte and 5 MB.");
+        }
+
+        if (!allowedImageTypes.Contains(image.ContentType))
+        {
+            throw new ImageValidationException("Supported formats are JPEG, PNG, GIF, and WebP.");
+        }
+
+        var extension = Path.GetExtension(image.FileName).ToLowerInvariant();
+        if (!allowedExtensions.Contains(extension))
+        {
+            throw new ImageValidationException("The image filename must have a supported extension.");
+        }
+
+        return extension;
+    }
 
     private static IReadOnlyCollection<HistoricalEvent> SeedEvents =>
     [
@@ -120,11 +308,16 @@ public sealed class HistoricalEventStore
         DateOnly endDate) =>
         new()
         {
-            Id = Guid.NewGuid(),
+            Id = CreateSeedId(title),
             Title = title,
             Summary = summary,
             Description = description,
             StartDate = startDate,
             EndDate = endDate
         };
+
+    private static Guid CreateSeedId(string title) =>
+        new(SHA256.HashData(Encoding.UTF8.GetBytes(title)).AsSpan(0, 16));
+
+    public sealed class ImageValidationException(string message) : Exception(message);
 }
