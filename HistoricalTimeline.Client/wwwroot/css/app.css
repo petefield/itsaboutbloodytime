@@ -37,6 +37,15 @@ a, .btn-link {
     margin-bottom: 1.5rem;
 }
 
+.timeline-page {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    min-height: 100vh;
+    margin: -1.1rem calc(50% - 50vw) 0;
+    padding: 1.5rem;
+}
+
 .event-table .event-date,
 .event-table .event-actions {
     white-space: nowrap;
@@ -47,6 +56,8 @@ a, .btn-link {
 }
 
 .timeline-scroll {
+    display: flex;
+    flex: 1;
     overflow-x: auto;
     padding: 1rem 0;
 }
@@ -54,8 +65,9 @@ a, .btn-link {
 .timeline-track {
     display: grid;
     grid-template-columns: repeat(var(--event-count), minmax(17rem, 1fr));
-    grid-template-rows: minmax(13rem, max-content) 3rem minmax(13rem, max-content);
+    grid-template-rows: minmax(16rem, 1fr) 3rem minmax(16rem, 1fr);
     column-gap: 1rem;
+    flex: 1;
     min-width: max-content;
     padding: 0 1rem;
 }
@@ -133,6 +145,15 @@ a, .btn-link {
     font-weight: 700;
 }
 
+.timeline-thumbnail {
+    display: block;
+    width: 100%;
+    height: 7rem;
+    margin-bottom: 0.75rem;
+    border-radius: 0.25rem;
+    object-fit: cover;
+}
+
 .event-detail-image {
     display: block;
     width: 100%;
@@ -167,6 +188,10 @@ a, .btn-link {
     .event-toolbar {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .timeline-page {
+        padding: 1rem;
     }
 }
 

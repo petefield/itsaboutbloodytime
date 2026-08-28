@@ -3,7 +3,7 @@
 
 <PageTitle>Event Timeline</PageTitle>
 
-<section class="event-page">
+<section class="timeline-page">
     <div class="event-toolbar">
         <div>
             <h1>Event timeline</h1>
@@ -35,6 +35,10 @@
                     <button class="timeline-event @(index % 2 == 0 ? "timeline-event-above" : "timeline-event-below")"
                             style="@($"grid-column: {index + 1};")"
                             @onclick="() => OpenDetails(historicalEvent)">
+                        @if (historicalEvent.ImageUrl is not null)
+                        {
+                            <img src="@ApiUrl(historicalEvent.ImageUrl)" alt="" class="timeline-thumbnail" />
+                        }
                         <span class="timeline-date">@DisplayDateRange(historicalEvent)</span>
                         <span class="timeline-title">@historicalEvent.Title</span>
                         <span class="timeline-summary">@historicalEvent.Summary</span>
