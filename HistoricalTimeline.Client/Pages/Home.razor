@@ -3,58 +3,70 @@
 
 <PageTitle>Historical Events</PageTitle>
 
-<div class="event-editor">
-    <section>
-        <h1>Historical events</h1>
-        <p class="text-muted">Record moments that shaped history.</p>
+<section class="event-page">
+    <div class="event-toolbar">
+        <div>
+            <h1>Historical events</h1>
+            <p class="mb-0 text-muted">Record moments that shaped history.</p>
+        </div>
+        <button class="btn btn-primary" @onclick="OpenCreate">Add event</button>
+    </div>
 
-        @if (loadError is not null)
-        {
-            <div class="alert alert-danger">@loadError</div>
-        }
-        else if (events is null)
-        {
-            <p>Loading events...</p>
-        }
-        else if (events.Count == 0)
-        {
-            <p class="text-muted">No events have been added yet.</p>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="table table-hover align-middle event-table">
-                    <thead>
+    @if (loadError is not null)
+    {
+        <div class="alert alert-danger">@loadError</div>
+    }
+    else if (events is null)
+    {
+        <p>Loading events...</p>
+    }
+    else if (events.Count == 0)
+    {
+        <p class="text-muted">No events have been added yet.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle event-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Start date</th>
+                        <th scope="col">End date</th>
+                        <th scope="col">Title</th>
+                        <th scope="col">Summary</th>
+                        <th scope="col"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var historicalEvent in events)
+                    {
                         <tr>
-                            <th scope="col">Start date</th>
-                            <th scope="col">End date</th>
-                            <th scope="col">Title</th>
-                            <th scope="col">Summary</th>
-                            <th scope="col"><span class="visually-hidden">Actions</span></th>
+                            <td class="event-date">@historicalEvent.StartDate.ToString("d MMM yyyy")</td>
+                            <td class="event-date">@historicalEvent.EndDate.ToString("d MMM yyyy")</td>
+                            <td>@historicalEvent.Title</td>
+                            <td>@historicalEvent.Summary</td>
+                            <td class="event-actions">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => Edit(historicalEvent)">Edit</button>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var historicalEvent in events)
-                        {
-                            <tr>
-                                <td class="event-date">@historicalEvent.StartDate.ToString("d MMM yyyy")</td>
-                                <td class="event-date">@historicalEvent.EndDate.ToString("d MMM yyyy")</td>
-                                <td>@historicalEvent.Title</td>
-                                <td>@historicalEvent.Summary</td>
-                                <td class="event-actions">
-                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => Edit(historicalEvent)">Edit</button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-    </section>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
 
-    <section class="card form-card">
-        <div class="card-body">
-            <h2 class="h4">@(editingId is null ? "Add an event" : "Edit event")</h2>
+@if (showEditor)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="event-editor-title">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="event-editor-title">@(editingId is null ? "Add an event" : "Edit event")</h2>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="ResetForm"></button>
+                </div>
+                <div class="modal-body">
             @if (saveError is not null)
             {
                 <div class="alert alert-danger">@saveError</div>
@@ -96,15 +108,16 @@
                         <div class="validation-message">@imageError</div>
                     }
                 </div>
-                <button class="btn btn-primary" type="submit" disabled="@saving">@(saving ? "Saving..." : "Save event")</button>
-                @if (editingId is not null)
-                {
-                    <button class="btn btn-link" type="button" @onclick="ResetForm">Cancel</button>
-                }
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" type="submit" disabled="@saving">@(saving ? "Saving..." : "Save event")</button>
+                    <button class="btn btn-outline-secondary" type="button" @onclick="ResetForm">Cancel</button>
+                </div>
             </EditForm>
+                </div>
+            </div>
         </div>
-    </section>
-</div>
+    </div>
+}
 
 @code {
     private const long MaximumImageSize = 5 * 1024 * 1024;
@@ -112,6 +125,7 @@
     private HistoricalEventForm form = new();
     private IBrowserFile? selectedImage;
     private Guid? editingId;
+    private bool showEditor;
     private bool saving;
     private string? loadError;
     private string? saveError;
@@ -204,6 +218,13 @@
         selectedImage = null;
         imageError = null;
         saveError = null;
+        showEditor = true;
+    }
+
+    private void OpenCreate()
+    {
+        ResetForm();
+        showEditor = true;
     }
 
     private void ResetForm()
@@ -213,7 +234,6 @@
         selectedImage = null;
         imageError = null;
         saveError = null;
+        showEditor = false;
     }
-
-    private string ApiUrl(string relativeUrl) => new Uri(Http.BaseAddress!, relativeUrl).ToString();
 }

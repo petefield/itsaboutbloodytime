@@ -24,12 +24,17 @@ a, .btn-link {
     padding-top: 1.1rem;
 }
 
-.event-editor {
-    display: grid;
-    gap: 2rem;
-    grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+.event-page {
     max-width: 1200px;
     margin: 0 auto;
+}
+
+.event-toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
 }
 
 .event-table .event-date,
@@ -41,13 +46,10 @@ a, .btn-link {
     width: 1%;
 }
 
-.form-card {
-    align-self: start;
-}
-
 @media (max-width: 900px) {
-    .event-editor {
-        grid-template-columns: 1fr;
+    .event-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
     }
 }
 
