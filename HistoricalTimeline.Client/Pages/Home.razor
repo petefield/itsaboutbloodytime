@@ -1,6 +1,5 @@
 @page "/"
 @inject HttpClient Http
-@inject NavigationManager Navigation
 
 <PageTitle>Historical Events</PageTitle>
 
@@ -23,23 +22,23 @@
         }
         else
         {
-            <div class="event-list">
+            <ol class="event-list">
                 @foreach (var historicalEvent in events)
                 {
-                    <article class="card event-card">
+                    <li class="event-row">
                         @if (historicalEvent.ImageUrl is not null)
                         {
-                            <img src="@ApiUrl(historicalEvent.ImageUrl)" alt="" class="card-img-top event-image" />
+                            <img src="@ApiUrl(historicalEvent.ImageUrl)" alt="" class="event-image" />
                         }
-                        <div class="card-body">
+                        <div class="event-details">
                             <p class="event-dates">@historicalEvent.StartDate.ToString("d MMMM yyyy") - @historicalEvent.EndDate.ToString("d MMMM yyyy")</p>
                             <h2 class="h5">@historicalEvent.Title</h2>
-                            <p>@historicalEvent.Summary</p>
-                            <button class="btn btn-outline-primary" @onclick="() => Edit(historicalEvent)">Edit</button>
+                            <p class="mb-0">@historicalEvent.Summary</p>
                         </div>
-                    </article>
+                        <button class="btn btn-outline-primary event-edit" @onclick="() => Edit(historicalEvent)">Edit</button>
+                    </li>
                 }
-            </div>
+            </ol>
         }
     </section>
 
