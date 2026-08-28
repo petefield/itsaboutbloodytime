@@ -51,6 +51,12 @@ public sealed class HistoricalEventStore
             new DateOnly(1941, 6, 22),
             new DateOnly(1941, 12, 5)),
         CreateEvent(
+            "Battle of Moscow",
+            "Soviet forces halted Germany's advance on Moscow.",
+            "German forces began their offensive towards Moscow in October 1941. A Soviet counteroffensive in December pushed German troops back from the capital during the winter.",
+            new DateOnly(1941, 10, 2),
+            new DateOnly(1942, 1, 7)),
+        CreateEvent(
             "Attack on Pearl Harbor",
             "Japan's attack on the United States Pacific Fleet brought the United States into the war.",
             "Japanese aircraft attacked the US naval base at Pearl Harbor, Hawaii, on 7 December 1941. The following day, the United States declared war on Japan.",
@@ -69,11 +75,23 @@ public sealed class HistoricalEventStore
             new DateOnly(1942, 10, 23),
             new DateOnly(1942, 11, 11)),
         CreateEvent(
+            "Operation Torch",
+            "Allied forces landed in French North Africa.",
+            "American and British forces landed in Morocco and Algeria in November 1942. The campaign opened a second front in North Africa while the Battle of El Alamein was still under way.",
+            new DateOnly(1942, 11, 8),
+            new DateOnly(1942, 11, 16)),
+        CreateEvent(
             "D-Day Landings",
             "Allied forces established a beachhead in Normandy.",
             "On 6 June 1944, Allied forces landed on five beaches in Normandy as part of Operation Overlord. The invasion began the liberation of western Europe from Nazi occupation.",
             new DateOnly(1944, 6, 6),
             new DateOnly(1944, 6, 6)),
+        CreateEvent(
+            "Battle of Normandy",
+            "Allied armies fought to break out from the Normandy beachhead.",
+            "Following the D-Day landings, Allied and German forces fought across Normandy for almost three months. The campaign ended with the collapse of German forces in the Falaise pocket.",
+            new DateOnly(1944, 6, 6),
+            new DateOnly(1944, 8, 30)),
         CreateEvent(
             "Liberation of Paris",
             "French and Allied forces liberated Paris from German occupation.",
