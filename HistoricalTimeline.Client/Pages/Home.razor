@@ -1,0 +1,210 @@
+@page "/"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Historical Events</PageTitle>
+
+<div class="event-editor">
+    <section>
+        <h1>Historical events</h1>
+        <p class="text-muted">Record moments that shaped history.</p>
+
+        @if (loadError is not null)
+        {
+            <div class="alert alert-danger">@loadError</div>
+        }
+        else if (events is null)
+        {
+            <p>Loading events...</p>
+        }
+        else if (events.Count == 0)
+        {
+            <p class="text-muted">No events have been added yet.</p>
+        }
+        else
+        {
+            <div class="event-list">
+                @foreach (var historicalEvent in events)
+                {
+                    <article class="card event-card">
+                        @if (historicalEvent.ImageUrl is not null)
+                        {
+                            <img src="@ApiUrl(historicalEvent.ImageUrl)" alt="" class="card-img-top event-image" />
+                        }
+                        <div class="card-body">
+                            <p class="event-dates">@historicalEvent.StartDate.ToString("d MMMM yyyy") - @historicalEvent.EndDate.ToString("d MMMM yyyy")</p>
+                            <h2 class="h5">@historicalEvent.Title</h2>
+                            <p>@historicalEvent.Summary</p>
+                            <button class="btn btn-outline-primary" @onclick="() => Edit(historicalEvent)">Edit</button>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="card form-card">
+        <div class="card-body">
+            <h2 class="h4">@(editingId is null ? "Add an event" : "Edit event")</h2>
+            @if (saveError is not null)
+            {
+                <div class="alert alert-danger">@saveError</div>
+            }
+            <EditForm Model="form" OnValidSubmit="SaveAsync" FormName="historical-event">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <div class="mb-3">
+                    <label class="form-label" for="title">Title</label>
+                    <InputText id="title" class="form-control" @bind-Value="form.Title" />
+                    <ValidationMessage For="() => form.Title" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="summary">Summary</label>
+                    <InputTextArea id="summary" class="form-control" @bind-Value="form.Summary" />
+                    <ValidationMessage For="() => form.Summary" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="description">Description</label>
+                    <InputTextArea id="description" class="form-control" rows="6" @bind-Value="form.Description" />
+                    <ValidationMessage For="() => form.Description" />
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="start-date">Start date</label>
+                        <InputDate id="start-date" class="form-control" @bind-Value="form.StartDate" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="end-date">End date</label>
+                        <InputDate id="end-date" class="form-control" @bind-Value="form.EndDate" />
+                        <ValidationMessage For="() => form.EndDate" />
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="image">Image @(editingId is null ? "" : "(optional)")</label>
+                    <InputFile id="image" class="form-control" OnChange="SelectImage" accept="image/jpeg,image/png,image/gif,image/webp" />
+                    @if (imageError is not null)
+                    {
+                        <div class="validation-message">@imageError</div>
+                    }
+                </div>
+                <button class="btn btn-primary" type="submit" disabled="@saving">@(saving ? "Saving..." : "Save event")</button>
+                @if (editingId is not null)
+                {
+                    <button class="btn btn-link" type="button" @onclick="ResetForm">Cancel</button>
+                }
+            </EditForm>
+        </div>
+    </section>
+</div>
+
+@code {
+    private const long MaximumImageSize = 5 * 1024 * 1024;
+    private List<HistoricalEvent>? events;
+    private HistoricalEventForm form = new();
+    private IBrowserFile? selectedImage;
+    private Guid? editingId;
+    private bool saving;
+    private string? loadError;
+    private string? saveError;
+    private string? imageError;
+
+    protected override async Task OnInitializedAsync() => await LoadEventsAsync();
+
+    private async Task LoadEventsAsync()
+    {
+        try
+        {
+            events = await Http.GetFromJsonAsync<List<HistoricalEvent>>("api/historical-events") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            loadError = "The events service is unavailable. Start the API and try again.";
+        }
+    }
+
+    private void SelectImage(InputFileChangeEventArgs args)
+    {
+        selectedImage = args.File;
+        imageError = selectedImage.Size > MaximumImageSize ? "Images must be 5 MB or smaller." : null;
+    }
+
+    private async Task SaveAsync()
+    {
+        saveError = null;
+        if (editingId is null && selectedImage is null)
+        {
+            imageError = "An image is required.";
+            return;
+        }
+
+        if (imageError is not null)
+        {
+            return;
+        }
+
+        saving = true;
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(form.Title), "title");
+        content.Add(new StringContent(form.Summary), "summary");
+        content.Add(new StringContent(form.Description), "description");
+        content.Add(new StringContent(form.StartDate.ToString("yyyy-MM-dd")), "startDate");
+        content.Add(new StringContent(form.EndDate.ToString("yyyy-MM-dd")), "endDate");
+        if (selectedImage is not null)
+        {
+            var imageContent = new StreamContent(selectedImage.OpenReadStream(MaximumImageSize));
+            imageContent.Headers.ContentType = new(selectedImage.ContentType);
+            content.Add(imageContent, "image", selectedImage.Name);
+        }
+
+        try
+        {
+            using var response = editingId is null
+                ? await Http.PostAsync("api/historical-events", content)
+                : await Http.PutAsync($"api/historical-events/{editingId}", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                saveError = "The event could not be saved. Check the information and try again.";
+                return;
+            }
+
+            ResetForm();
+            await LoadEventsAsync();
+        }
+        catch (HttpRequestException)
+        {
+            saveError = "The events service is unavailable. Start the API and try again.";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private void Edit(HistoricalEvent historicalEvent)
+    {
+        editingId = historicalEvent.Id;
+        form = new HistoricalEventForm
+        {
+            Title = historicalEvent.Title,
+            Summary = historicalEvent.Summary,
+            Description = historicalEvent.Description,
+            StartDate = historicalEvent.StartDate,
+            EndDate = historicalEvent.EndDate
+        };
+        selectedImage = null;
+        imageError = null;
+        saveError = null;
+    }
+
+    private void ResetForm()
+    {
+        editingId = null;
+        form = new HistoricalEventForm();
+        selectedImage = null;
+        imageError = null;
+        saveError = null;
+    }
+
+    private string ApiUrl(string relativeUrl) => new Uri(Http.BaseAddress!, relativeUrl).ToString();
+}

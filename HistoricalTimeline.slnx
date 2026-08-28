@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="HistoricalTimeline.Api/HistoricalTimeline.Api.csproj" />
+  <Project Path="HistoricalTimeline.Client/HistoricalTimeline.Client.csproj" />
+</Solution>
