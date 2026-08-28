@@ -22,23 +22,33 @@
         }
         else
         {
-            <ol class="event-list">
-                @foreach (var historicalEvent in events)
-                {
-                    <li class="event-row">
-                        @if (historicalEvent.ImageUrl is not null)
+            <div class="table-responsive">
+                <table class="table table-hover align-middle event-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Start date</th>
+                            <th scope="col">End date</th>
+                            <th scope="col">Title</th>
+                            <th scope="col">Summary</th>
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var historicalEvent in events)
                         {
-                            <img src="@ApiUrl(historicalEvent.ImageUrl)" alt="" class="event-image" />
+                            <tr>
+                                <td class="event-date">@historicalEvent.StartDate.ToString("d MMM yyyy")</td>
+                                <td class="event-date">@historicalEvent.EndDate.ToString("d MMM yyyy")</td>
+                                <td>@historicalEvent.Title</td>
+                                <td>@historicalEvent.Summary</td>
+                                <td class="event-actions">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => Edit(historicalEvent)">Edit</button>
+                                </td>
+                            </tr>
                         }
-                        <div class="event-details">
-                            <p class="event-dates">@historicalEvent.StartDate.ToString("d MMMM yyyy") - @historicalEvent.EndDate.ToString("d MMMM yyyy")</p>
-                            <h2 class="h5">@historicalEvent.Title</h2>
-                            <p class="mb-0">@historicalEvent.Summary</p>
-                        </div>
-                        <button class="btn btn-outline-primary event-edit" @onclick="() => Edit(historicalEvent)">Edit</button>
-                    </li>
-                }
-            </ol>
+                    </tbody>
+                </table>
+            </div>
         }
     </section>
 
