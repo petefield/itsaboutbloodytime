@@ -1,0 +1,102 @@
+@page "/timeline"
+@inject HttpClient Http
+
+<PageTitle>Event Timeline</PageTitle>
+
+<section class="event-page">
+    <div class="event-toolbar">
+        <div>
+            <h1>Event timeline</h1>
+            <p class="mb-0 text-muted">Explore events in chronological order.</p>
+        </div>
+        <a class="btn btn-outline-primary" href="">Event list</a>
+    </div>
+
+    @if (loadError is not null)
+    {
+        <div class="alert alert-danger">@loadError</div>
+    }
+    else if (events is null)
+    {
+        <p>Loading events...</p>
+    }
+    else if (events.Count == 0)
+    {
+        <p class="text-muted">No events have been added yet.</p>
+    }
+    else
+    {
+        <div class="timeline-scroll">
+            <div class="timeline-track" style="@($"--event-count: {events.Count}")">
+                <div class="timeline-axis" aria-hidden="true"></div>
+                @for (var index = 0; index < events.Count; index++)
+                {
+                    var historicalEvent = events[index];
+                    <button class="timeline-event @(index % 2 == 0 ? "timeline-event-above" : "timeline-event-below")"
+                            style="@($"grid-column: {index + 1};")"
+                            @onclick="() => OpenDetails(historicalEvent)">
+                        <span class="timeline-date">@DisplayDateRange(historicalEvent)</span>
+                        <span class="timeline-title">@historicalEvent.Title</span>
+                        <span class="timeline-summary">@historicalEvent.Summary</span>
+                    </button>
+                }
+            </div>
+        </div>
+    }
+</section>
+
+@if (selectedEvent is not null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="event-details-title">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="event-details-title">@selectedEvent.Title</h2>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseDetails"></button>
+                </div>
+                <div class="modal-body">
+                    @if (selectedEvent.ImageUrl is not null)
+                    {
+                        <img src="@ApiUrl(selectedEvent.ImageUrl)" alt="" class="event-detail-image mb-3" />
+                    }
+                    <p class="timeline-date">@DisplayDateRange(selectedEvent)</p>
+                    <p>@selectedEvent.Summary</p>
+                    <p class="mb-0">@selectedEvent.Description</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseDetails">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<HistoricalEvent>? events;
+    private HistoricalEvent? selectedEvent;
+    private string? loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            events = await Http.GetFromJsonAsync<List<HistoricalEvent>>("api/historical-events") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            loadError = "The events service is unavailable. Start the API and try again.";
+        }
+    }
+
+    private void OpenDetails(HistoricalEvent historicalEvent) => selectedEvent = historicalEvent;
+
+    private void CloseDetails() => selectedEvent = null;
+
+    private static string DisplayDateRange(HistoricalEvent historicalEvent) =>
+        historicalEvent.StartDate == historicalEvent.EndDate
+            ? historicalEvent.StartDate.ToString("d MMMM yyyy")
+            : $"{historicalEvent.StartDate:d MMMM yyyy} - {historicalEvent.EndDate:d MMMM yyyy}";
+
+    private string ApiUrl(string relativeUrl) => new Uri(Http.BaseAddress!, relativeUrl).ToString();
+}

@@ -9,7 +9,10 @@
             <h1>Historical events</h1>
             <p class="mb-0 text-muted">Record moments that shaped history.</p>
         </div>
-        <button class="btn btn-primary" @onclick="OpenCreate">Add event</button>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-primary" href="timeline">View timeline</a>
+            <button class="btn btn-primary" @onclick="OpenCreate">Add event</button>
+        </div>
     </div>
 
     @if (loadError is not null)
