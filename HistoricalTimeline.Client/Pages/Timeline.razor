@@ -31,11 +31,15 @@
                 <div class="timeline-axis" aria-hidden="true"></div>
                 @foreach (var placement in timelinePlacements)
                 {
-                    <div class="timeline-range"
+                    <div class="timeline-range @(highlightedEventId == placement.Event.Id ? "timeline-range-highlighted" : null)"
                          style="@($"left: {placement.Left:F1}px; width: {placement.RangeWidth:F1}px; --event-colour: {placement.Colour};")"
                          aria-hidden="true"></div>
                     <button class="timeline-event"
                             style="@PositionEvent(placement)"
+                            @onmouseenter="() => HighlightEvent(placement.Event.Id)"
+                            @onmouseleave="ClearHighlightedEvent"
+                            @onfocus="() => HighlightEvent(placement.Event.Id)"
+                            @onblur="ClearHighlightedEvent"
                             @onclick="() => OpenDetails(placement.Event)">
                         @if (placement.Event.ImageUrl is not null)
                         {
@@ -91,6 +95,7 @@
     private List<HistoricalEvent>? events;
     private List<TimelinePlacement> timelinePlacements = [];
     private HistoricalEvent? selectedEvent;
+    private Guid? highlightedEventId;
     private string? loadError;
     private int timelineWidth;
     private int timelineHeight;
@@ -111,6 +116,10 @@
     private void OpenDetails(HistoricalEvent historicalEvent) => selectedEvent = historicalEvent;
 
     private void CloseDetails() => selectedEvent = null;
+
+    private void HighlightEvent(Guid eventId) => highlightedEventId = eventId;
+
+    private void ClearHighlightedEvent() => highlightedEventId = null;
 
     private void BuildTimelinePlacements()
     {
