@@ -46,6 +46,28 @@ a, .btn-link {
     width: 1%;
 }
 
+.event-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.event-thumbnail,
+.editor-image {
+    border-radius: 0.25rem;
+    object-fit: cover;
+}
+
+.event-thumbnail {
+    width: 3rem;
+    height: 2.25rem;
+}
+
+.editor-image {
+    width: 10rem;
+    height: 6rem;
+}
+
 @media (max-width: 900px) {
     .event-toolbar {
         align-items: flex-start;
