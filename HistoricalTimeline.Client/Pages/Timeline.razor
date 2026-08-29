@@ -31,8 +31,12 @@
     }
     else
     {
-        <div class="timeline-top-scroll" @ref="topTimelineScroll" aria-label="Timeline horizontal scroll">
-            <div style="@($"width: {timelineWidth}px;")"></div>
+        <div class="timeline-scrollbar-row">
+            <time class="timeline-range-label" datetime="@timelineStartDate.ToString("yyyy-MM-dd")">@timelineStartDate.ToString("d MMM yyyy")</time>
+            <div class="timeline-top-scroll" @ref="topTimelineScroll" aria-label="Timeline horizontal scroll">
+                <div style="@($"width: {timelineWidth}px;")"></div>
+            </div>
+            <time class="timeline-range-label timeline-range-label-end" datetime="@timelineEndDate.ToString("yyyy-MM-dd")">@timelineEndDate.ToString("d MMM yyyy")</time>
         </div>
         <div class="timeline-scroll" @ref="timelineScroll">
             <div class="timeline-track" style="@($"width: {timelineWidth}px; min-height: {timelineHeight}px;")">
@@ -115,6 +119,8 @@
     private string? loadError;
     private int timelineWidth;
     private int timelineHeight;
+    private DateOnly timelineStartDate;
+    private DateOnly timelineEndDate;
     private ElementReference topTimelineScroll;
     private ElementReference timelineScroll;
     private IJSObjectReference? timelineScrollModule;
@@ -136,6 +142,8 @@
         timelinePlacements = [];
         selectedEvent = null;
         loadError = null;
+        timelineStartDate = default;
+        timelineEndDate = default;
 
         try
         {
@@ -203,6 +211,8 @@
 
         var timelineStart = orderedEvents[0].StartDate;
         var timelineEnd = orderedEvents.Max(historicalEvent => historicalEvent.EndDate);
+        timelineStartDate = timelineStart;
+        timelineEndDate = timelineEnd;
         var durationInDays = Math.Max(1, timelineEnd.DayNumber - timelineStart.DayNumber);
         var minimumTimelineWidth = Math.Max(
             MinimumTimelineWidth,

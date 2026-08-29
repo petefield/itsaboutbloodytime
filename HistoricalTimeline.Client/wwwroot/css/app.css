@@ -481,21 +481,17 @@ h1 {
 }
 
 .timeline-top-scroll {
-    position: sticky;
-    top: 0;
-    z-index: 3;
-    flex: 0 0 auto;
-    height: 1.25rem;
-    margin-bottom: 0.5rem;
+    flex: 1 1 auto;
+    height: 1.875rem;
     overflow-x: scroll;
     overflow-y: hidden;
     background: #f5f7fb;
     scrollbar-color: #4f8cff #e5eaf3;
-    scrollbar-width: thin;
+    scrollbar-width: auto;
 }
 
 .timeline-top-scroll::-webkit-scrollbar {
-    height: 0.75rem;
+    height: 1.25rem;
 }
 
 .timeline-top-scroll::-webkit-scrollbar-track {
@@ -504,13 +500,36 @@ h1 {
 }
 
 .timeline-top-scroll::-webkit-scrollbar-thumb {
-    border: 2px solid #e5eaf3;
+    border: 3px solid #e5eaf3;
     border-radius: 999px;
     background: #4f8cff;
 }
 
 .timeline-top-scroll::-webkit-scrollbar-thumb:hover {
     background: #3978e8;
+}
+
+.timeline-scrollbar-row {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    background: #f8faff;
+}
+
+.timeline-range-label {
+    min-width: 7.5rem;
+    color: #566b93;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.timeline-range-label-end {
+    text-align: right;
 }
 
 .timeline-track {
