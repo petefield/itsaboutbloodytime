@@ -138,7 +138,7 @@ for index in "${!event_records[@]}"; do
     image_path="$temporary_directory/image-$index"
     if [[ "$image_url" == http://* || "$image_url" == https://* ]]; then
         printf '    Downloading image...\n'
-        if ! curl --fail --location --retry 3 --silent --show-error --output "$image_path" "$image_url"; then
+        if ! curl --fail --location --connect-timeout 10 --max-time 30 --silent --show-error --output "$image_path" "$image_url"; then
             printf 'Unable to retrieve image for event %d; importing without it.\n' "$((index + 1))" >&2
             image_paths[$index]=''
             image_mime_types[$index]=''
