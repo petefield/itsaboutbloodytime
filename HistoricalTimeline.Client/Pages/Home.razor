@@ -62,7 +62,6 @@
                             <span class="topic-card-description">@(string.IsNullOrWhiteSpace(timeline.Description) ? "Add a description to this timeline." : timeline.Description)</span>
                         </span>
                     </a>
-                    <button class="topic-card-menu" @onclick="() => OpenEdit(timeline)" aria-label="@($"Edit {timeline.Title}")">⋮</button>
                     <a class="topic-card-action" href="@($"timelines/{timeline.Id:N}")">Open timeline <span aria-hidden="true">→</span></a>
                 </article>
             }
@@ -77,7 +76,7 @@
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="timeline-editor-title">@(editingId is null ? "Create a timeline" : "Edit timeline")</h2>
+                    <h2 class="modal-title fs-5" id="timeline-editor-title">Create a timeline</h2>
                     <button type="button" class="btn-close" aria-label="Close" @onclick="CloseEditor"></button>
                 </div>
                 <div class="modal-body">
@@ -100,12 +99,6 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="timeline-image">Image (optional)</label>
-                            @if (editingImageUrl is not null)
-                            {
-                                <div class="mb-2">
-                                    <img src="@ApiUrl(editingImageUrl)" alt="Current timeline image" class="editor-image" />
-                                </div>
-                            }
                             <InputFile id="timeline-image" class="form-control" OnChange="SelectImage" accept="image/jpeg,image/png,image/gif,image/webp" />
                             @if (imageError is not null)
                             {
@@ -133,8 +126,6 @@
     private List<TimelineTopic>? timelines;
     private TimelineTopicForm form = new();
     private IBrowserFile? selectedImage;
-    private Guid? editingId;
-    private string? editingImageUrl;
     private bool showEditor;
     private bool saving;
     private string? loadError;
@@ -158,25 +149,8 @@
 
     private void OpenCreate()
     {
-        editingId = null;
         form = new TimelineTopicForm();
         selectedImage = null;
-        editingImageUrl = null;
-        imageError = null;
-        saveError = null;
-        showEditor = true;
-    }
-
-    private void OpenEdit(TimelineTopic timeline)
-    {
-        editingId = timeline.Id;
-        form = new TimelineTopicForm
-        {
-            Title = timeline.Title,
-            Description = timeline.Description
-        };
-        selectedImage = null;
-        editingImageUrl = timeline.ImageUrl;
         imageError = null;
         saveError = null;
         showEditor = true;
@@ -186,7 +160,6 @@
     {
         showEditor = false;
         selectedImage = null;
-        editingImageUrl = null;
         imageError = null;
         saveError = null;
     }
@@ -218,9 +191,7 @@
 
         try
         {
-            using var response = editingId is null
-                ? await Http.PostAsync("api/timelines", content)
-                : await Http.PutAsync($"api/timelines/{editingId:N}", content);
+            using var response = await Http.PostAsync("api/timelines", content);
             if (!response.IsSuccessStatusCode)
             {
                 saveError = "The timeline could not be saved. Check the information and try again.";
