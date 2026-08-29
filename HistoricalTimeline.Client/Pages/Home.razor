@@ -18,29 +18,13 @@
         </div>
     </div>
 
-    <section class="create-timeline-panel">
-        <div class="create-timeline-copy">
-            <span class="create-timeline-icon" aria-hidden="true">+</span>
-            <div>
-                <h2>Create a timeline</h2>
-                <p>Start with a subject, person, place, or period in history.</p>
-            </div>
+    <div class="event-toolbar timeline-list-toolbar">
+        <div>
+            <h2 class="section-heading">Your timelines</h2>
+            <p class="section-introduction">Choose a timeline to explore its events.</p>
         </div>
-        <div class="create-timeline-form">
-            @if (saveError is not null)
-            {
-                <div class="alert alert-danger">@saveError</div>
-            }
-            <EditForm Model="form" OnValidSubmit="CreateTimelineAsync" FormName="timeline-topic">
-                <DataAnnotationsValidator />
-                <div class="input-group">
-                    <InputText class="form-control" @bind-Value="form.Title" placeholder="Timeline title" aria-label="Timeline title" />
-                    <button class="btn btn-primary" type="submit" disabled="@saving">@(saving ? "Creating..." : "Create timeline")</button>
-                </div>
-                <ValidationMessage For="() => form.Title" />
-            </EditForm>
-        </div>
-    </section>
+        <button class="btn btn-primary" @onclick="OpenCreate">Create timeline <span aria-hidden="true">→</span></button>
+    </div>
 
     @if (loadError is not null)
     {
@@ -52,30 +36,110 @@
     }
     else if (timelines.Count == 0)
     {
-        <p class="text-muted">No timelines have been created yet.</p>
+        <div class="empty-timelines">
+            <span class="create-timeline-icon" aria-hidden="true">+</span>
+            <h2>No timelines yet</h2>
+            <p>Create your first timeline to start preserving historical events.</p>
+        </div>
     }
     else
     {
         <div class="topic-grid">
             @foreach (var timeline in timelines)
             {
-                <a class="topic-card" href="@($"timelines/{timeline.Id:N}")">
-                    <span class="topic-card-icon" aria-hidden="true">◷</span>
-                    <span class="topic-card-title">@timeline.Title</span>
-                    <span class="topic-card-menu" aria-hidden="true">⋮</span>
-                    <span class="topic-card-action">Open timeline <span aria-hidden="true">→</span></span>
-                </a>
+                <article class="topic-card">
+                    <a class="topic-card-main" href="@($"timelines/{timeline.Id:N}")">
+                        @if (timeline.ImageUrl is not null)
+                        {
+                            <img src="@ApiUrl(timeline.ImageUrl)" alt="" class="topic-card-image" />
+                        }
+                        else
+                        {
+                            <span class="topic-card-icon" aria-hidden="true">◷</span>
+                        }
+                        <span class="topic-card-copy">
+                            <span class="topic-card-title">@timeline.Title</span>
+                            <span class="topic-card-description">@(string.IsNullOrWhiteSpace(timeline.Description) ? "Add a description to this timeline." : timeline.Description)</span>
+                        </span>
+                    </a>
+                    <button class="topic-card-menu" @onclick="() => OpenEdit(timeline)" aria-label="@($"Edit {timeline.Title}")">⋮</button>
+                    <a class="topic-card-action" href="@($"timelines/{timeline.Id:N}")">Open timeline <span aria-hidden="true">→</span></a>
+                </article>
             }
         </div>
     }
 </section>
 
+@if (showEditor)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="timeline-editor-title">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="timeline-editor-title">@(editingId is null ? "Create a timeline" : "Edit timeline")</h2>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseEditor"></button>
+                </div>
+                <div class="modal-body">
+                    @if (saveError is not null)
+                    {
+                        <div class="alert alert-danger">@saveError</div>
+                    }
+                    <EditForm Model="form" OnValidSubmit="SaveTimelineAsync" FormName="timeline-topic">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="mb-3">
+                            <label class="form-label" for="timeline-title">Title</label>
+                            <InputText id="timeline-title" class="form-control" @bind-Value="form.Title" />
+                            <ValidationMessage For="() => form.Title" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="timeline-description">Description</label>
+                            <InputTextArea id="timeline-description" class="form-control" rows="4" @bind-Value="form.Description" />
+                            <ValidationMessage For="() => form.Description" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="timeline-image">Image (optional)</label>
+                            @if (editingImageUrl is not null)
+                            {
+                                <div class="mb-2">
+                                    <img src="@ApiUrl(editingImageUrl)" alt="Current timeline image" class="editor-image" />
+                                </div>
+                            }
+                            <InputFile id="timeline-image" class="form-control" OnChange="SelectImage" accept="image/jpeg,image/png,image/gif,image/webp" />
+                            @if (imageError is not null)
+                            {
+                                <div class="validation-message">@imageError</div>
+                            }
+                            else if (selectedImage is not null)
+                            {
+                                <div class="form-text">Selected image: @selectedImage.Name</div>
+                            }
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary" type="submit" disabled="@saving">@(saving ? "Saving..." : "Save timeline")</button>
+                            <button class="btn btn-outline-secondary" type="button" @onclick="CloseEditor">Cancel</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
+    private const long MaximumImageSize = 5 * 1024 * 1024;
+
     private List<TimelineTopic>? timelines;
     private TimelineTopicForm form = new();
+    private IBrowserFile? selectedImage;
+    private Guid? editingId;
+    private string? editingImageUrl;
+    private bool showEditor;
     private bool saving;
     private string? loadError;
     private string? saveError;
+    private string? imageError;
 
     protected override async Task OnInitializedAsync() => await LoadTimelinesAsync();
 
@@ -92,20 +156,78 @@
         }
     }
 
-    private async Task CreateTimelineAsync()
+    private void OpenCreate()
+    {
+        editingId = null;
+        form = new TimelineTopicForm();
+        selectedImage = null;
+        editingImageUrl = null;
+        imageError = null;
+        saveError = null;
+        showEditor = true;
+    }
+
+    private void OpenEdit(TimelineTopic timeline)
+    {
+        editingId = timeline.Id;
+        form = new TimelineTopicForm
+        {
+            Title = timeline.Title,
+            Description = timeline.Description
+        };
+        selectedImage = null;
+        editingImageUrl = timeline.ImageUrl;
+        imageError = null;
+        saveError = null;
+        showEditor = true;
+    }
+
+    private void CloseEditor()
+    {
+        showEditor = false;
+        selectedImage = null;
+        editingImageUrl = null;
+        imageError = null;
+        saveError = null;
+    }
+
+    private void SelectImage(InputFileChangeEventArgs args)
+    {
+        selectedImage = args.File;
+        imageError = selectedImage.Size > MaximumImageSize ? "Images must be 5 MB or smaller." : null;
+    }
+
+    private async Task SaveTimelineAsync()
     {
         saveError = null;
+        if (imageError is not null)
+        {
+            return;
+        }
+
         saving = true;
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(form.Title), "title");
+        content.Add(new StringContent(form.Description), "description");
+        if (selectedImage is not null)
+        {
+            var imageContent = new StreamContent(selectedImage.OpenReadStream(MaximumImageSize));
+            imageContent.Headers.ContentType = new(selectedImage.ContentType);
+            content.Add(imageContent, "image", selectedImage.Name);
+        }
+
         try
         {
-            using var response = await Http.PostAsJsonAsync("api/timelines", form);
+            using var response = editingId is null
+                ? await Http.PostAsync("api/timelines", content)
+                : await Http.PutAsync($"api/timelines/{editingId:N}", content);
             if (!response.IsSuccessStatusCode)
             {
-                saveError = "The timeline could not be created. Check the title and try again.";
+                saveError = "The timeline could not be saved. Check the information and try again.";
                 return;
             }
 
-            form = new TimelineTopicForm();
+            CloseEditor();
             await LoadTimelinesAsync();
         }
         catch (HttpRequestException)
@@ -117,4 +239,6 @@
             saving = false;
         }
     }
+
+    private string ApiUrl(string relativeUrl) => new Uri(Http.BaseAddress!, relativeUrl).ToString();
 }

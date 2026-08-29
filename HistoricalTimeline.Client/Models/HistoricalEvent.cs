@@ -17,12 +17,17 @@ public sealed class TimelineTopic
 {
     public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
 }
 
 public sealed class TimelineTopicForm
 {
     [Required, StringLength(200)]
     public string Title { get; set; } = string.Empty;
+
+    [Required, StringLength(500)]
+    public string Description { get; set; } = string.Empty;
 }
 
 public sealed class HistoricalEventForm : IValidatableObject

@@ -327,9 +327,9 @@ h1 {
 .topic-card {
     position: relative;
     display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 1rem;
-    min-height: 11rem;
+    grid-template-columns: 1fr auto;
+    gap: 1rem 0.75rem;
+    min-height: 13rem;
     padding: 1.75rem 1.75rem 1.5rem 2rem;
     border: 1px solid #cfe0fb;
     border-radius: 1.15rem;
@@ -358,6 +358,19 @@ h1 {
     transform: translateY(-2px);
 }
 
+.topic-card-main {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 1.15rem;
+    align-items: center;
+    color: inherit;
+    text-decoration: none;
+}
+
+.topic-card-main:hover {
+    color: inherit;
+}
+
 .topic-card-icon {
     display: grid;
     width: 3rem;
@@ -370,12 +383,33 @@ h1 {
     font-size: 1.5rem;
 }
 
+.topic-card-image {
+    width: 5.2rem;
+    height: 5.2rem;
+    border-radius: 0.85rem;
+    object-fit: cover;
+}
+
+.topic-card-copy {
+    display: grid;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
 .topic-card-title {
-    align-self: center;
     color: #071b42;
     font-size: 1.5rem;
     font-weight: 800;
     letter-spacing: -0.035em;
+}
+
+.topic-card-description {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    color: #566b93;
+    line-height: 1.5;
 }
 
 .topic-card-menu {
@@ -384,10 +418,16 @@ h1 {
     height: 2.75rem;
     place-items: center;
     align-self: center;
+    border: 0;
     border-radius: 50%;
     background: #f0f5ff;
     color: #176ee9;
     font-size: 1.6rem;
+}
+
+.topic-card-menu:hover,
+.topic-card-menu:focus {
+    background: #dfeafd;
 }
 
 .topic-card-action {
@@ -396,6 +436,43 @@ h1 {
     color: #0969ec;
     font-size: 1rem;
     font-weight: 700;
+}
+
+.section-heading {
+    margin: 0;
+    color: #071b42;
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+
+.section-introduction {
+    margin: 0.35rem 0 0;
+    color: #566b93;
+}
+
+.empty-timelines {
+    display: grid;
+    justify-items: center;
+    max-width: 34rem;
+    margin: 4rem auto;
+    padding: 2.5rem;
+    border: 1px dashed #b8d2f8;
+    border-radius: 1.15rem;
+    background: #fff;
+    color: #566b93;
+    text-align: center;
+}
+
+.empty-timelines h2 {
+    margin: 1.25rem 0 0.4rem;
+    color: #071b42;
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+.empty-timelines p {
+    margin: 0;
 }
 
 .event-toolbar {

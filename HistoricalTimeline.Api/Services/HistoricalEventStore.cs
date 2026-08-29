@@ -58,7 +58,10 @@ public sealed class HistoricalEventStore
         }
     }
 
-    public async Task<TimelineTopic> AddTimelineAsync(string title)
+    public async Task<TimelineTopic> AddTimelineAsync(
+        string title,
+        string description,
+        string? imageBlobName)
     {
         await EnsureInitializedAsync();
 
@@ -66,10 +69,30 @@ public sealed class HistoricalEventStore
         {
             PartitionKey = TimelinePartitionKey,
             RowKey = Guid.NewGuid().ToString("N"),
-            Title = title
+            Title = title,
+            Description = description,
+            ImageBlobName = imageBlobName
         };
         await timelineTable.AddEntityAsync(entity);
         return ToModel(entity);
+    }
+
+    public async Task<bool> UpdateTimelineAsync(TimelineTopic timeline)
+    {
+        await EnsureInitializedAsync();
+
+        try
+        {
+            await timelineTable.UpdateEntityAsync(
+                ToEntity(timeline),
+                ETag.All,
+                TableUpdateMode.Replace);
+            return true;
+        }
+        catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
+        {
+            return false;
+        }
     }
 
     public async Task<bool> TimelineExistsAsync(Guid timelineId) =>
@@ -178,6 +201,30 @@ public sealed class HistoricalEventStore
         }
     }
 
+    public async Task<BlobDownloadStreamingResult?> DownloadTimelineImageAsync(
+        Guid timelineId,
+        string blobName)
+    {
+        await EnsureInitializedAsync();
+
+        try
+        {
+            var timeline = await timelineTable.GetEntityAsync<TimelineTopicEntity>(
+                TimelinePartitionKey,
+                timelineId.ToString("N"));
+            if (!string.Equals(timeline.Value.ImageBlobName, blobName, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            return (await imageContainer.GetBlobClient(blobName).DownloadStreamingAsync()).Value;
+        }
+        catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
+        {
+            return null;
+        }
+    }
+
     private async Task EnsureInitializedAsync()
     {
         if (initialized)
@@ -238,7 +285,23 @@ public sealed class HistoricalEventStore
         new()
         {
             Id = Guid.ParseExact(entity.RowKey, "N"),
-            Title = entity.Title
+            Title = entity.Title,
+            Description = entity.Description,
+            ImageUrl = entity.ImageBlobName is null
+                ? null
+                : $"/api/timelines/{entity.RowKey}/images/{entity.ImageBlobName}"
+        };
+
+    private static TimelineTopicEntity ToEntity(TimelineTopic timeline) =>
+        new()
+        {
+            PartitionKey = TimelinePartitionKey,
+            RowKey = timeline.Id.ToString("N"),
+            Title = timeline.Title,
+            Description = timeline.Description,
+            ImageBlobName = timeline.ImageUrl is null
+                ? null
+                : Path.GetFileName(timeline.ImageUrl)
         };
 
     private static string GetTimelinePartitionKey(Guid timelineId) => timelineId.ToString("N");

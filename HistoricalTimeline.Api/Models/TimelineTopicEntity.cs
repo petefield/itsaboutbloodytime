@@ -10,4 +10,6 @@ public sealed class TimelineTopicEntity : ITableEntity
     public DateTimeOffset? Timestamp { get; set; }
     public ETag ETag { get; set; }
     public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string? ImageBlobName { get; set; }
 }
