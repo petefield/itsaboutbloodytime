@@ -11,8 +11,14 @@
             <p class="page-introduction">@(string.IsNullOrWhiteSpace(timeline?.Description) ? "Add a description to introduce this timeline." : timeline.Description)</p>
         </div>
         <div class="toolbar-actions">
-            <a class="btn btn-outline-primary" href="@($"timelines/{TimelineId:N}/timeline")">View timeline</a>
-            <button class="btn btn-outline-primary" @onclick="OpenTimelineEditor" disabled="@(timeline is null)">Edit timeline</button>
+            <a class="event-selection-action" href="@($"timelines/{TimelineId:N}/timeline")">
+                <span class="event-selection-action-icon" aria-hidden="true">◷</span>
+                <span>View timeline</span>
+            </a>
+            <button class="event-selection-action" type="button" @onclick="OpenTimelineEditor" disabled="@(timeline is null)">
+                <span class="event-selection-action-icon" aria-hidden="true">✎</span>
+                <span>Edit timeline</span>
+            </button>
         </div>
     </div>
 

@@ -622,6 +622,7 @@ h1 {
     background: #fff;
     color: #0969ec;
     font-size: 0.8rem;
+    text-decoration: none;
 }
 
 .event-selection-action:hover,
