@@ -14,6 +14,7 @@ Creates a timeline and imports every CSV row as an event. The CSV must contain:
 The optional image_url column may contain an HTTP(S) URL, a file:// URL, or a
 path relative to the CSV file. Each image is uploaded with its event.
 Images larger than 5 MB are resized and compressed to fit the upload limit.
+Unavailable or unsupported images are skipped while their event is imported.
 
 Set API_BASE_URL to target a different API endpoint. It defaults to the
 deployed API:
@@ -37,7 +38,7 @@ if [[ ! -f "$csv_path" ]]; then
     exit 1
 fi
 
-for command in curl file jq magick python3; do
+for command in curl file jq python3; do
     if ! command -v "$command" >/dev/null 2>&1; then
         printf 'Required command not found: %s\n' "$command" >&2
         exit 1
@@ -126,28 +127,50 @@ for index in "${!event_records[@]}"; do
 
     image_path="$temporary_directory/image-$index"
     if [[ "$image_url" == http://* || "$image_url" == https://* ]]; then
-        curl --fail --location --retry 3 --silent --show-error --output "$image_path" "$image_url"
+        if ! curl --fail --location --retry 3 --silent --show-error --output "$image_path" "$image_url"; then
+            printf 'Unable to retrieve image for event %d; importing without it.\n' "$((index + 1))" >&2
+            image_paths[$index]=''
+            image_mime_types[$index]=''
+            continue
+        fi
     else
         source_path=${image_url#file://}
         if [[ "$source_path" != /* ]]; then
             source_path="$csv_directory/$source_path"
         fi
         if [[ ! -f "$source_path" ]]; then
-            printf 'Image file not found for event %d: %s\n' "$((index + 1))" "$source_path" >&2
-            exit 1
+            printf 'Image file not found for event %d; importing without it: %s\n' "$((index + 1))" "$source_path" >&2
+            image_paths[$index]=''
+            image_mime_types[$index]=''
+            continue
         fi
-        cp -- "$source_path" "$image_path"
+        if ! cp -- "$source_path" "$image_path"; then
+            printf 'Unable to copy image for event %d; importing without it.\n' "$((index + 1))" >&2
+            image_paths[$index]=''
+            image_mime_types[$index]=''
+            continue
+        fi
     fi
 
     if [[ ! -s "$image_path" ]]; then
-        printf 'Image for event %d is empty.\n' "$((index + 1))" >&2
-        exit 1
+        printf 'Image for event %d is empty; importing without it.\n' "$((index + 1))" >&2
+        image_paths[$index]=''
+        image_mime_types[$index]=''
+        continue
     fi
 
     image_size=$(wc -c <"$image_path")
     if [[ $image_size -gt $MAXIMUM_IMAGE_SIZE ]]; then
+        if ! command -v magick >/dev/null 2>&1; then
+            printf 'Image for event %d exceeds 5 MB and ImageMagick is unavailable; importing without it.\n' "$((index + 1))" >&2
+            image_paths[$index]=''
+            image_mime_types[$index]=''
+            continue
+        fi
+
         compressed_image_path="$temporary_directory/image-$index.jpg"
         compressed=false
+        compression_failed=false
 
         printf 'Reducing image for event %d to fit the 5 MB upload limit.\n' "$((index + 1))"
         for maximum_dimension in 2560 2048 1600 1280 960; do
@@ -159,8 +182,8 @@ for index in "${!event_records[@]}"; do
                     -interlace Plane \
                     -quality "$quality" \
                     "$compressed_image_path"; then
-                    printf 'Unable to reduce image for event %d.\n' "$((index + 1))" >&2
-                    exit 1
+                    compression_failed=true
+                    break 2
                 fi
 
                 if [[ $(wc -c <"$compressed_image_path") -le $MAXIMUM_IMAGE_SIZE ]]; then
@@ -172,17 +195,30 @@ for index in "${!event_records[@]}"; do
         done
 
         if [[ "$compressed" != true ]]; then
-            printf 'Image for event %d could not be reduced below the 5 MB upload limit.\n' "$((index + 1))" >&2
-            exit 1
+            if [[ "$compression_failed" == true ]]; then
+                printf 'Unable to reduce image for event %d; importing without it.\n' "$((index + 1))" >&2
+            else
+                printf 'Image for event %d could not be reduced below 5 MB; importing without it.\n' "$((index + 1))" >&2
+            fi
+            image_paths[$index]=''
+            image_mime_types[$index]=''
+            continue
         fi
     fi
 
-    mime_type=$(file --brief --mime-type "$image_path")
+    if ! mime_type=$(file --brief --mime-type "$image_path"); then
+        printf 'Unable to identify image type for event %d; importing without it.\n' "$((index + 1))" >&2
+        image_paths[$index]=''
+        image_mime_types[$index]=''
+        continue
+    fi
     case "$mime_type" in
         image/jpeg|image/png|image/gif|image/webp) ;;
         *)
-            printf 'Unsupported image type for event %d: %s\n' "$((index + 1))" "$mime_type" >&2
-            exit 1
+            printf 'Unsupported image type for event %d: %s; importing without it.\n' "$((index + 1))" "$mime_type" >&2
+            image_paths[$index]=''
+            image_mime_types[$index]=''
+            continue
             ;;
     esac
 
