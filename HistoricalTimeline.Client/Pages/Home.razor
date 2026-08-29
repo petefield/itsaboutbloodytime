@@ -4,18 +4,27 @@
 <PageTitle>Timeline topics</PageTitle>
 
 <section class="event-page">
-    <div class="page-heading">
-        <div>
+    <div class="page-heading archive-hero">
+        <div class="archive-hero-content">
             <p class="eyebrow">Your historical archive</p>
             <h1>Timeline topics</h1>
             <p class="page-introduction">Create a topic, then record the events that shaped it.</p>
         </div>
+        <div class="archive-hero-art" aria-hidden="true">
+            <span class="archive-hero-node archive-hero-node-one"></span>
+            <span class="archive-hero-node archive-hero-node-two"></span>
+            <span class="archive-hero-node archive-hero-node-three"></span>
+            <span class="archive-hero-clock">◷</span>
+        </div>
     </div>
 
     <section class="create-timeline-panel">
-        <div>
-            <h2>Create a timeline</h2>
-            <p>Start with a subject, person, place, or period in history.</p>
+        <div class="create-timeline-copy">
+            <span class="create-timeline-icon" aria-hidden="true">+</span>
+            <div>
+                <h2>Create a timeline</h2>
+                <p>Start with a subject, person, place, or period in history.</p>
+            </div>
         </div>
         <div class="create-timeline-form">
             @if (saveError is not null)
@@ -51,8 +60,9 @@
             @foreach (var timeline in timelines)
             {
                 <a class="topic-card" href="@($"timelines/{timeline.Id:N}")">
-                    <span class="topic-card-icon" aria-hidden="true">↗</span>
+                    <span class="topic-card-icon" aria-hidden="true">◷</span>
                     <span class="topic-card-title">@timeline.Title</span>
+                    <span class="topic-card-menu" aria-hidden="true">⋮</span>
                     <span class="topic-card-action">Open timeline <span aria-hidden="true">→</span></span>
                 </a>
             }
