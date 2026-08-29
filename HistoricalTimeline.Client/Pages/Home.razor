@@ -7,7 +7,7 @@
     <div class="page-heading archive-hero">
         <div class="archive-hero-content">
             <p class="eyebrow">Your historical archive</p>
-            <h1>Timeline topics</h1>
+            <h1>Timelines</h1>
             <p class="page-introduction">Create a topic, then record the events that shaped it.</p>
         </div>
         <div class="archive-hero-art" aria-hidden="true">
@@ -18,12 +18,21 @@
         </div>
     </div>
 
-    <div class="event-toolbar timeline-list-toolbar">
-        <div>
-            <h2 class="section-heading">Timelines</h2>
+    <section class="timeline-list-action-sheet" aria-label="Timeline actions">
+        <div class="timeline-search">
+            <label class="visually-hidden" for="timeline-search">Search timelines</label>
+            <InputText id="timeline-search"
+                       class="form-control"
+                       @bind-Value="searchTerm"
+                       @bind-Value:event="oninput"
+                       placeholder="Search timelines"
+                       aria-label="Search timelines" />
         </div>
-        <button class="btn btn-primary" @onclick="OpenCreate">Create timeline <span aria-hidden="true">→</span></button>
-    </div>
+        <button class="event-selection-action" type="button" @onclick="OpenCreate">
+            <span class="event-selection-action-icon" aria-hidden="true">+</span>
+            <span>Create timeline</span>
+        </button>
+    </section>
 
     @if (loadError is not null)
     {
@@ -33,38 +42,41 @@
     {
         <p>Loading timelines...</p>
     }
-    else if (timelines.Count == 0)
-    {
-        <div class="empty-timelines">
-            <span class="create-timeline-icon" aria-hidden="true">+</span>
-            <h2>No timelines yet</h2>
-            <p>Create your first timeline to start preserving historical events.</p>
-        </div>
-    }
     else
     {
-        <div class="topic-grid">
-            @foreach (var timeline in timelines)
-            {
-                <article class="topic-card">
-                    <a class="topic-card-main" href="@($"timelines/{timeline.Id:N}")">
-                        @if (timeline.ImageUrl is not null)
-                        {
-                            <img src="@ApiUrl(timeline.ImageUrl)" alt="" class="topic-card-image" />
-                        }
-                        else
-                        {
-                            <span class="topic-card-icon" aria-hidden="true">◷</span>
-                        }
-                        <span class="topic-card-copy">
-                            <span class="topic-card-title">@timeline.Title</span>
-                            <span class="topic-card-description">@(string.IsNullOrWhiteSpace(timeline.Description) ? "Add a description to this timeline." : timeline.Description)</span>
-                        </span>
-                    </a>
-                    <a class="topic-card-action" href="@($"timelines/{timeline.Id:N}")">Open timeline <span aria-hidden="true">→</span></a>
-                </article>
-            }
-        </div>
+        @if (FilteredTimelines.Count == 0)
+        {
+            <div class="empty-timelines">
+                <span class="create-timeline-icon" aria-hidden="true">+</span>
+                <h2>@(timelines.Count == 0 ? "No timelines yet" : "No matching timelines")</h2>
+                <p>@(timelines.Count == 0 ? "Create your first timeline to start preserving historical events." : "Try a different title or description.")</p>
+            </div>
+        }
+        else
+        {
+            <div class="topic-grid">
+                @foreach (var timeline in FilteredTimelines)
+                {
+                    <article class="topic-card">
+                        <a class="topic-card-main" href="@($"timelines/{timeline.Id:N}")">
+                            @if (timeline.ImageUrl is not null)
+                            {
+                                <img src="@ApiUrl(timeline.ImageUrl)" alt="" class="topic-card-image" />
+                            }
+                            else
+                            {
+                                <span class="topic-card-icon" aria-hidden="true">◷</span>
+                            }
+                            <span class="topic-card-copy">
+                                <span class="topic-card-title">@timeline.Title</span>
+                                <span class="topic-card-description">@(string.IsNullOrWhiteSpace(timeline.Description) ? "Add a description to this timeline." : timeline.Description)</span>
+                            </span>
+                        </a>
+                        <a class="topic-card-action" href="@($"timelines/{timeline.Id:N}/timeline")">View Timeline <span aria-hidden="true">→</span></a>
+                    </article>
+                }
+            </div>
+        }
     }
 </section>
 
@@ -130,6 +142,15 @@
     private string? loadError;
     private string? saveError;
     private string? imageError;
+    private string searchTerm = string.Empty;
+    private IReadOnlyList<TimelineTopic> FilteredTimelines =>
+        timelines is null || string.IsNullOrWhiteSpace(searchTerm)
+            ? timelines ?? []
+            : timelines
+                .Where(timeline =>
+                    timeline.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                    || timeline.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
 
     protected override async Task OnInitializedAsync() => await LoadTimelinesAsync();
 
