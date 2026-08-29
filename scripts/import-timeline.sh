@@ -3,6 +3,7 @@ set -euo pipefail
 
 readonly DEFAULT_API_BASE_URL="https://white-tree-0af7bee10.7.azurestaticapps.net/api"
 readonly MAXIMUM_IMAGE_SIZE=5242880
+readonly DEFAULT_IMAGE_DOWNLOAD_USER_AGENT="HistoricalTimelineImporter/1.0 (https://github.com/petefield/itsaboutbloodytime; bot)"
 
 progress() {
     printf '\n==> %s\n' "$1"
@@ -33,6 +34,9 @@ Unavailable or unsupported images are skipped while their event is imported.
 Set API_BASE_URL to target a different API endpoint. It defaults to the
 deployed API:
   https://white-tree-0af7bee10.7.azurestaticapps.net/api
+
+Set IMAGE_DOWNLOAD_USER_AGENT to override the identifying User-Agent sent
+when retrieving images. The default identifies this importer to Wikimedia.
 EOF
 }
 
@@ -71,6 +75,7 @@ timeline_title=${2:-"$default_title"}
 timeline_description=${3:-"Imported from ${csv_filename}."}
 api_base_url=${API_BASE_URL:-"$DEFAULT_API_BASE_URL"}
 api_base_url=${api_base_url%/}
+image_download_user_agent=${IMAGE_DOWNLOAD_USER_AGENT:-"$DEFAULT_IMAGE_DOWNLOAD_USER_AGENT"}
 
 if [[ ${#timeline_title} -gt 200 || ${#timeline_description} -gt 500 ]]; then
     printf 'Timeline title must be 200 characters or fewer and description 500 characters or fewer.\n' >&2
@@ -149,7 +154,9 @@ for index in "${!event_records[@]}"; do
     image_path="$temporary_directory/image-$index"
     if [[ "$image_url" == http://* || "$image_url" == https://* ]]; then
         printf '    Downloading image...\n'
-        if ! curl --fail --location --connect-timeout 10 --max-time 30 --silent --show-error --output "$image_path" "$image_url"; then
+        if ! curl --fail --location --connect-timeout 10 --max-time 30 --silent --show-error \
+            --user-agent "$image_download_user_agent" \
+            --output "$image_path" "$image_url"; then
             printf 'Unable to retrieve image for event %d; importing without it.\n' "$((index + 1))" >&2
             image_paths[$index]=''
             image_mime_types[$index]=''
