@@ -9,10 +9,8 @@
     <div class="event-toolbar">
         <div>
             <h1>@(timeline?.Title ?? "Event timeline")</h1>
-            <p class="mb-0 text-muted">Explore this timeline's events in chronological order.</p>
         </div>
         <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href="">All timelines</a>
             <a class="btn btn-outline-primary" href="@($"timelines/{TimelineId:N}")">Event list</a>
         </div>
     </div>
@@ -99,6 +97,7 @@
 
 @code {
     private const int EventCardWidth = 240;
+    private const int EventCardHeight = 320;
     private const int LaneHeight = 240;
     private const int AxisClearance = 32;
     private const int MinimumTimelineWidth = 1_600;
@@ -251,7 +250,11 @@
         timelineWidth = Math.Max(
             minimumTimelineWidth,
             (int)Math.Ceiling(durationInDays * pixelsPerDay) + EventCardWidth);
-        timelineHeight = (aboveLaneEnds.Count + belowLaneEnds.Count) * LaneHeight + (AxisClearance * 2);
+        var maximumLaneCount = Math.Max(aboveLaneEnds.Count, belowLaneEnds.Count);
+        timelineHeight = 2 * (
+            AxisClearance
+            + ((maximumLaneCount - 1) * LaneHeight)
+            + EventCardHeight);
     }
 
     private string PositionEvent(TimelinePlacement placement)
