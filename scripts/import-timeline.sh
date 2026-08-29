@@ -13,6 +13,7 @@ Creates a timeline and imports every CSV row as an event. The CSV must contain:
 
 The optional image_url column may contain an HTTP(S) URL, a file:// URL, or a
 path relative to the CSV file. Each image is uploaded with its event.
+Images larger than 5 MB are resized and compressed to fit the upload limit.
 
 Set API_BASE_URL to target a different API endpoint. It defaults to the
 deployed API:
@@ -36,7 +37,7 @@ if [[ ! -f "$csv_path" ]]; then
     exit 1
 fi
 
-for command in curl file jq python3; do
+for command in curl file jq magick python3; do
     if ! command -v "$command" >/dev/null 2>&1; then
         printf 'Required command not found: %s\n' "$command" >&2
         exit 1
@@ -138,9 +139,42 @@ for index in "${!event_records[@]}"; do
         cp -- "$source_path" "$image_path"
     fi
 
-    if [[ ! -s "$image_path" || $(wc -c <"$image_path") -gt $MAXIMUM_IMAGE_SIZE ]]; then
-        printf 'Image for event %d is empty or exceeds the 5 MB upload limit.\n' "$((index + 1))" >&2
+    if [[ ! -s "$image_path" ]]; then
+        printf 'Image for event %d is empty.\n' "$((index + 1))" >&2
         exit 1
+    fi
+
+    image_size=$(wc -c <"$image_path")
+    if [[ $image_size -gt $MAXIMUM_IMAGE_SIZE ]]; then
+        compressed_image_path="$temporary_directory/image-$index.jpg"
+        compressed=false
+
+        printf 'Reducing image for event %d to fit the 5 MB upload limit.\n' "$((index + 1))"
+        for maximum_dimension in 2560 2048 1600 1280 960; do
+            for quality in 85 75 65 55; do
+                if ! magick "${image_path}[0]" \
+                    -auto-orient \
+                    -strip \
+                    -resize "${maximum_dimension}x${maximum_dimension}>" \
+                    -interlace Plane \
+                    -quality "$quality" \
+                    "$compressed_image_path"; then
+                    printf 'Unable to reduce image for event %d.\n' "$((index + 1))" >&2
+                    exit 1
+                fi
+
+                if [[ $(wc -c <"$compressed_image_path") -le $MAXIMUM_IMAGE_SIZE ]]; then
+                    mv -- "$compressed_image_path" "$image_path"
+                    compressed=true
+                    break 2
+                fi
+            done
+        done
+
+        if [[ "$compressed" != true ]]; then
+            printf 'Image for event %d could not be reduced below the 5 MB upload limit.\n' "$((index + 1))" >&2
+            exit 1
+        fi
     fi
 
     mime_type=$(file --brief --mime-type "$image_path")
