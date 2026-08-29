@@ -597,10 +597,17 @@ h1 {
 }
 
 .timeline-editor-heading {
+    min-width: 0;
+}
+
+.timeline-editor-summary {
     display: flex;
     gap: 1rem;
     align-items: center;
-    min-width: 0;
+}
+
+.timeline-editor-summary .page-introduction {
+    margin: 0;
 }
 
 .timeline-editor-thumbnail {

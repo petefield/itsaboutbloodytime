@@ -7,13 +7,13 @@
 <section class="event-page">
     <div class="event-toolbar">
         <div class="timeline-editor-heading">
-            @if (timeline?.ImageUrl is not null)
-            {
-                <img src="@ApiUrl(timeline.ImageUrl)" alt="" class="timeline-editor-thumbnail" />
-            }
-            <div>
-                <p class="eyebrow">Timeline Editor</p>
-                <h1>@(timeline?.Title ?? "Timeline events")</h1>
+            <p class="eyebrow">Timeline Editor</p>
+            <h1>@(timeline?.Title ?? "Timeline events")</h1>
+            <div class="timeline-editor-summary">
+                @if (timeline?.ImageUrl is not null)
+                {
+                    <img src="@ApiUrl(timeline.ImageUrl)" alt="" class="timeline-editor-thumbnail" />
+                }
                 <p class="page-introduction">@(string.IsNullOrWhiteSpace(timeline?.Description) ? "Add a description to introduce this timeline." : timeline.Description)</p>
             </div>
         </div>
