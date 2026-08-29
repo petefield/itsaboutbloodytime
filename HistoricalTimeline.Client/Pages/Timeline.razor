@@ -86,19 +86,26 @@
     <div class="modal-backdrop fade show"></div>
     <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="event-details-title">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content">
+            <div class="modal-content event-details-modal">
                 <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="event-details-title">@selectedEvent.Title</h2>
+                    <div>
+                        <p class="event-details-overline">Historical event</p>
+                        <h2 class="modal-title" id="event-details-title">@selectedEvent.Title</h2>
+                    </div>
                     <button type="button" class="btn-close" aria-label="Close" @onclick="CloseDetails"></button>
                 </div>
                 <div class="modal-body">
                     @if (selectedEvent.ImageUrl is not null)
                     {
-                        <img src="@ApiUrl(selectedEvent.ImageUrl)" alt="" class="event-detail-image mb-3" />
+                        <img src="@ApiUrl(selectedEvent.ImageUrl)" alt="" class="event-detail-image" />
                     }
-                    <p class="timeline-date">@DisplayDateRange(selectedEvent)</p>
-                    <p>@selectedEvent.Summary</p>
-                    <p class="mb-0">@selectedEvent.Description</p>
+                    <div class="event-details-content">
+                        <p class="event-detail-date">@DisplayDateRange(selectedEvent)</p>
+                        <p class="event-detail-summary">@selectedEvent.Summary</p>
+                        <div class="event-detail-description">
+                            <p>@selectedEvent.Description</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" @onclick="CloseDetails">Close</button>
