@@ -642,9 +642,9 @@ h1 {
 .timeline-page {
     display: flex;
     flex-direction: column;
-    width: 100vw;
+    width: calc(100cqw + var(--content-horizontal-padding));
     min-height: 100vh;
-    margin: -3.5rem calc(50% - 50vw) 0;
+    margin: -3.5rem 0 0 -1.5rem;
     padding: 1.25rem 1.5rem 1.5rem;
 }
 
@@ -1086,6 +1086,10 @@ h1 {
     .archive-hero.home-hero {
         margin-top: -2.5rem;
         margin-left: calc((100% - 100cqw) / 2 - 1rem);
+    }
+
+    .timeline-page {
+        margin-left: -1rem;
     }
 
     @media (prefers-reduced-motion: reduce) {
