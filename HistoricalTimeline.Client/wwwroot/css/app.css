@@ -163,6 +163,10 @@ a, .btn-link {
     max-width: 760px;
 }
 
+.support-page {
+    max-width: 960px;
+}
+
 .information-panel {
     padding: 2rem;
     border: 1px solid #cfe0fb;
@@ -181,6 +185,92 @@ a, .btn-link {
     margin: 0;
     color: #566b93;
     line-height: 1.7;
+}
+
+.support-guide {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.support-card {
+    padding: 1.75rem;
+    border: 1px solid #cfe0fb;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 0.6rem 1.4rem rgb(20 59 113 / 8%);
+}
+
+.support-card-wide {
+    grid-column: 1 / -1;
+}
+
+.support-card-label {
+    margin: 0 0 0.4rem;
+    color: #176ee9;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.support-card h2 {
+    margin: 0 0 1.25rem;
+    color: #073b8f;
+    font-size: 1.35rem;
+}
+
+.support-steps {
+    display: grid;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: support-step;
+}
+
+.support-steps li {
+    position: relative;
+    padding-left: 2.6rem;
+    color: #566b93;
+    line-height: 1.65;
+    counter-increment: support-step;
+}
+
+.support-steps li::before {
+    position: absolute;
+    top: 0.1rem;
+    left: 0;
+    display: grid;
+    width: 1.75rem;
+    height: 1.75rem;
+    place-items: center;
+    border-radius: 50%;
+    background: #e9f1ff;
+    color: #0969ec;
+    content: counter(support-step);
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+.support-steps strong,
+.support-tips strong {
+    color: #173e79;
+}
+
+.support-tips {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.support-tips p {
+    margin: 0;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    background: #f3f7ff;
+    color: #566b93;
+    line-height: 1.65;
 }
 
 .archive-hero {
@@ -1119,6 +1209,15 @@ h1 {
     .content {
         --content-horizontal-padding: 2rem;
         padding: 2.5rem 1rem 3rem;
+    }
+
+    .support-guide,
+    .support-tips {
+        grid-template-columns: 1fr;
+    }
+
+    .support-card {
+        padding: 1.25rem;
     }
 
     .archive-hero.home-hero {
