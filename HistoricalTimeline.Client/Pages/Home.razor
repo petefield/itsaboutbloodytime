@@ -4,16 +4,20 @@
 <PageTitle>Timeline topics</PageTitle>
 
 <section class="event-page">
-    <div class="event-toolbar">
+    <div class="page-heading">
         <div>
+            <p class="eyebrow">Your historical archive</p>
             <h1>Timeline topics</h1>
-            <p class="mb-0 text-muted">Create a topic, then record the events that shaped it.</p>
+            <p class="page-introduction">Create a topic, then record the events that shaped it.</p>
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-body">
-            <h2 class="h5">Create a timeline</h2>
+    <section class="create-timeline-panel">
+        <div>
+            <h2>Create a timeline</h2>
+            <p>Start with a subject, person, place, or period in history.</p>
+        </div>
+        <div class="create-timeline-form">
             @if (saveError is not null)
             {
                 <div class="alert alert-danger">@saveError</div>
@@ -27,7 +31,7 @@
                 <ValidationMessage For="() => form.Title" />
             </EditForm>
         </div>
-    </div>
+    </section>
 
     @if (loadError is not null)
     {
@@ -43,13 +47,13 @@
     }
     else
     {
-        <div class="list-group">
+        <div class="topic-grid">
             @foreach (var timeline in timelines)
             {
-                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                   href="@($"timelines/{timeline.Id:N}")">
-                    <span>@timeline.Title</span>
-                    <span class="text-muted">Edit events <span aria-hidden="true">→</span></span>
+                <a class="topic-card" href="@($"timelines/{timeline.Id:N}")">
+                    <span class="topic-card-icon" aria-hidden="true">↗</span>
+                    <span class="topic-card-title">@timeline.Title</span>
+                    <span class="topic-card-action">Open timeline <span aria-hidden="true">→</span></span>
                 </a>
             }
         </div>

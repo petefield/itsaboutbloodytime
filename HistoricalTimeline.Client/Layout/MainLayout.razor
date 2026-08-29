@@ -1,6 +1,17 @@
 ﻿@inherits LayoutComponentBase
+<header class="app-header">
+    <div class="app-header-content">
+        <a class="app-brand" href="">
+            <span class="app-brand-mark" aria-hidden="true">T</span>
+            <span>It's About Bloody Time</span>
+        </a>
+        <nav class="app-navigation" aria-label="Primary navigation">
+            <NavLink href="" Match="NavLinkMatch.All">Timelines</NavLink>
+        </nav>
+    </div>
+</header>
 <main>
-    <article class="content px-4">
+    <article class="content">
         @Body
     </article>
 </main>

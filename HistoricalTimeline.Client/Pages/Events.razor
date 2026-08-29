@@ -6,10 +6,11 @@
 <section class="event-page">
     <div class="event-toolbar">
         <div>
+            <p class="eyebrow">Timeline editor</p>
             <h1>@(timeline?.Title ?? "Timeline events")</h1>
-            <p class="mb-0 text-muted">Record moments that shaped this timeline.</p>
+            <p class="page-introduction">Record moments that shaped this timeline.</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="toolbar-actions">
             <a class="btn btn-outline-secondary" href="">All timelines</a>
             <a class="btn btn-outline-primary" href="@($"timelines/{TimelineId:N}/timeline")">View timeline</a>
             <button class="btn btn-primary" @onclick="OpenCreate">Add event</button>
@@ -30,7 +31,7 @@
     }
     else
     {
-        <div class="table-responsive">
+        <div class="event-table-surface table-responsive">
             <table class="table table-hover align-middle event-table">
                 <thead>
                     <tr>
