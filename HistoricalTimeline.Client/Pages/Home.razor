@@ -21,12 +21,23 @@
     <section class="timeline-list-action-sheet" aria-label="Timeline actions">
         <div class="timeline-search">
             <label class="visually-hidden" for="timeline-search">Search timelines</label>
+            <span class="timeline-search-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" />
+                </svg>
+            </span>
             <input id="timeline-search"
                    class="form-control"
                    @bind="searchTerm"
                    @bind:event="oninput"
                    placeholder="Search timelines"
                    aria-label="Search timelines" />
+            @if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                <button class="timeline-search-clear" type="button" @onclick="ClearSearch" aria-label="Clear search">
+                    <span aria-hidden="true">×</span>
+                </button>
+            }
         </div>
         <button class="event-selection-action" type="button" @onclick="OpenCreate">
             <span class="event-selection-action-icon" aria-hidden="true">+</span>
@@ -121,7 +132,7 @@
                             }
                         </div>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-primary" type="submit" disabled="@saving">@(saving ? "Saving..." : "Save timeline")</button>
+                            <button class="btn btn-primary" type="submit" disabled="@saving">@(saving ? "Saving..." : "Create timeline")</button>
                             <button class="btn btn-outline-secondary" type="button" @onclick="CloseEditor">Cancel</button>
                         </div>
                     </EditForm>
@@ -175,6 +186,8 @@
         saveError = null;
         showEditor = true;
     }
+
+    private void ClearSearch() => searchTerm = string.Empty;
 
     private void CloseEditor()
     {

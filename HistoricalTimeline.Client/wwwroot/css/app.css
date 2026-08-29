@@ -465,11 +465,60 @@ h1 {
 }
 
 .timeline-search {
+    position: relative;
     flex: 1 1 18rem;
 }
 
 .timeline-search .form-control {
     min-height: 3.5rem;
+    padding-right: 3.25rem;
+    padding-left: 3rem;
+}
+
+.timeline-search-icon {
+    position: absolute;
+    top: 50%;
+    left: 1rem;
+    z-index: 1;
+    width: 1.25rem;
+    height: 1.25rem;
+    color: #566b93;
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+.timeline-search-icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 2;
+}
+
+.timeline-search-clear {
+    position: absolute;
+    top: 50%;
+    right: 0.65rem;
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #566b93;
+    font-size: 1.6rem;
+    line-height: 1;
+    place-items: center;
+    transform: translateY(-50%);
+}
+
+.timeline-search-clear:hover,
+.timeline-search-clear:focus-visible {
+    background: #e9f1ff;
+    color: #073b8f;
 }
 
 .empty-timelines {
