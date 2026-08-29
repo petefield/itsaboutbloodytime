@@ -1,15 +1,18 @@
-@page "/timeline"
+@page "/timelines/{TimelineId:guid}/timeline"
 @inject HttpClient Http
 
-<PageTitle>Event Timeline</PageTitle>
+<PageTitle>Event timeline</PageTitle>
 
 <section class="timeline-page">
     <div class="event-toolbar">
         <div>
-            <h1>Event timeline</h1>
-            <p class="mb-0 text-muted">Explore events in chronological order.</p>
+            <h1>@(timeline?.Title ?? "Event timeline")</h1>
+            <p class="mb-0 text-muted">Explore this timeline's events in chronological order.</p>
         </div>
-        <a class="btn btn-outline-primary" href="">Event list</a>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="">All timelines</a>
+            <a class="btn btn-outline-primary" href="@($"timelines/{TimelineId:N}")">Event list</a>
+        </div>
     </div>
 
     @if (loadError is not null)
@@ -95,6 +98,10 @@
         "#0d6efd", "#198754", "#dc3545", "#6f42c1", "#fd7e14",
         "#0dcaf0", "#d63384", "#20c997", "#795548", "#6c757d"
     ];
+    [Parameter]
+    public Guid TimelineId { get; set; }
+
+    private TimelineTopic? timeline;
     private List<HistoricalEvent>? events;
     private List<TimelinePlacement> timelinePlacements = [];
     private HistoricalEvent? selectedEvent;
@@ -103,16 +110,30 @@
     private int timelineWidth;
     private int timelineHeight;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
+        timeline = null;
+        events = null;
+        timelinePlacements = [];
+        selectedEvent = null;
+        loadError = null;
+
         try
         {
-            events = await Http.GetFromJsonAsync<List<HistoricalEvent>>("api/historical-events") ?? [];
+            timeline = await Http.GetFromJsonAsync<TimelineTopic>($"api/timelines/{TimelineId:N}");
+            if (timeline is null)
+            {
+                loadError = "The requested timeline could not be found.";
+                return;
+            }
+
+            events = await Http.GetFromJsonAsync<List<HistoricalEvent>>(
+                $"api/timelines/{TimelineId:N}/historical-events") ?? [];
             BuildTimelinePlacements();
         }
         catch (HttpRequestException)
         {
-            loadError = "The events service is unavailable. Start the API and try again.";
+            loadError = "The requested timeline could not be loaded. Start the API and try again.";
         }
     }
 

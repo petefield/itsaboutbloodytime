@@ -12,8 +12,12 @@ namespace HistoricalTimeline.Api.Services;
 
 public sealed class HistoricalEventStore
 {
-    private const string PartitionKey = "events";
+    private const string LegacyEventPartitionKey = "events";
+    private const string TimelinePartitionKey = "timelines";
+    private const string DefaultTimelineTitle = "Second World War";
+    private static readonly Guid DefaultTimelineId = new("8e9f5064-101b-48e2-8866-5c118cd7c2a7");
     private readonly TableClient eventTable;
+    private readonly TableClient timelineTable;
     private readonly BlobContainerClient imageContainer;
     private readonly SemaphoreSlim initializationLock = new(1, 1);
     private bool initialized;
@@ -24,30 +28,33 @@ public sealed class HistoricalEventStore
             ?? throw new InvalidOperationException("StorageConnectionString must be configured.");
 
         eventTable = new TableClient(connectionString, "HistoricalEvents");
+        timelineTable = new TableClient(connectionString, "TimelineTopics");
         imageContainer = new BlobContainerClient(connectionString, "event-images");
     }
 
-    public async Task<IReadOnlyCollection<HistoricalEvent>> GetAllAsync()
+    public async Task<IReadOnlyCollection<TimelineTopic>> GetTimelinesAsync()
     {
         await EnsureInitializedAsync();
-        var historicalEvents = new List<HistoricalEvent>();
+        var timelines = new List<TimelineTopic>();
 
-        await foreach (var entity in eventTable.QueryAsync<HistoricalEventEntity>(
-            entity => entity.PartitionKey == PartitionKey))
+        await foreach (var entity in timelineTable.QueryAsync<TimelineTopicEntity>(
+            entity => entity.PartitionKey == TimelinePartitionKey))
         {
-            historicalEvents.Add(ToModel(entity));
+            timelines.Add(ToModel(entity));
         }
 
-        return historicalEvents.OrderBy(historicalEvent => historicalEvent.StartDate).ToArray();
+        return timelines.OrderBy(timeline => timeline.Title).ToArray();
     }
 
-    public async Task<HistoricalEvent?> GetAsync(Guid id)
+    public async Task<TimelineTopic?> GetTimelineAsync(Guid timelineId)
     {
         await EnsureInitializedAsync();
 
         try
         {
-            var response = await eventTable.GetEntityAsync<HistoricalEventEntity>(PartitionKey, id.ToString("N"));
+            var response = await timelineTable.GetEntityAsync<TimelineTopicEntity>(
+                TimelinePartitionKey,
+                timelineId.ToString("N"));
             return ToModel(response.Value);
         }
         catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
@@ -56,21 +63,72 @@ public sealed class HistoricalEventStore
         }
     }
 
-    public async Task<HistoricalEvent> AddAsync(HistoricalEvent historicalEvent)
+    public async Task<TimelineTopic> AddTimelineAsync(string title)
     {
         await EnsureInitializedAsync();
-        var entity = ToEntity(historicalEvent);
-        await eventTable.AddEntityAsync(entity);
+
+        var entity = new TimelineTopicEntity
+        {
+            PartitionKey = TimelinePartitionKey,
+            RowKey = Guid.NewGuid().ToString("N"),
+            Title = title
+        };
+        await timelineTable.AddEntityAsync(entity);
         return ToModel(entity);
     }
 
-    public async Task<bool> UpdateAsync(HistoricalEvent historicalEvent)
+    public async Task<bool> TimelineExistsAsync(Guid timelineId) =>
+        await GetTimelineAsync(timelineId) is not null;
+
+    public async Task<IReadOnlyCollection<HistoricalEvent>> GetAllAsync(Guid timelineId)
+    {
+        await EnsureInitializedAsync();
+        var historicalEvents = new List<HistoricalEvent>();
+
+        await foreach (var entity in eventTable.QueryAsync<HistoricalEventEntity>(
+            entity => entity.PartitionKey == GetTimelinePartitionKey(timelineId)))
+        {
+            historicalEvents.Add(ToModel(timelineId, entity));
+        }
+
+        return historicalEvents.OrderBy(historicalEvent => historicalEvent.StartDate).ToArray();
+    }
+
+    public async Task<HistoricalEvent?> GetAsync(Guid timelineId, Guid id)
     {
         await EnsureInitializedAsync();
 
         try
         {
-            await eventTable.UpdateEntityAsync(ToEntity(historicalEvent), ETag.All, TableUpdateMode.Replace);
+            var response = await eventTable.GetEntityAsync<HistoricalEventEntity>(
+                GetTimelinePartitionKey(timelineId),
+                id.ToString("N"));
+            return ToModel(timelineId, response.Value);
+        }
+        catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
+        {
+            return null;
+        }
+    }
+
+    public async Task<HistoricalEvent> AddAsync(Guid timelineId, HistoricalEvent historicalEvent)
+    {
+        await EnsureInitializedAsync();
+        var entity = ToEntity(timelineId, historicalEvent);
+        await eventTable.AddEntityAsync(entity);
+        return ToModel(timelineId, entity);
+    }
+
+    public async Task<bool> UpdateAsync(Guid timelineId, HistoricalEvent historicalEvent)
+    {
+        await EnsureInitializedAsync();
+
+        try
+        {
+            await eventTable.UpdateEntityAsync(
+                ToEntity(timelineId, historicalEvent),
+                ETag.All,
+                TableUpdateMode.Replace);
             return true;
         }
         catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
@@ -95,9 +153,25 @@ public sealed class HistoricalEventStore
         return blobName;
     }
 
-    public async Task<BlobDownloadStreamingResult?> DownloadImageAsync(string blobName)
+    public async Task<BlobDownloadStreamingResult?> DownloadImageAsync(Guid timelineId, string blobName)
     {
         await EnsureInitializedAsync();
+
+        var imageBelongsToTimeline = false;
+        await foreach (var entity in eventTable.QueryAsync<HistoricalEventEntity>(
+            entity => entity.PartitionKey == GetTimelinePartitionKey(timelineId)))
+        {
+            if (string.Equals(entity.ImageBlobName, blobName, StringComparison.Ordinal))
+            {
+                imageBelongsToTimeline = true;
+                break;
+            }
+        }
+
+        if (!imageBelongsToTimeline)
+        {
+            return null;
+        }
 
         try
         {
@@ -125,24 +199,51 @@ public sealed class HistoricalEventStore
             }
 
             await eventTable.CreateIfNotExistsAsync();
+            await timelineTable.CreateIfNotExistsAsync();
             await imageContainer.CreateIfNotExistsAsync(PublicAccessType.None);
 
-            var hasEvents = false;
+            await CreateDefaultTimelineAsync();
+
+            var hasLegacyEvents = false;
             await foreach (var _ in eventTable.QueryAsync<HistoricalEventEntity>(
-                entity => entity.PartitionKey == PartitionKey,
+                entity => entity.PartitionKey == LegacyEventPartitionKey,
                 maxPerPage: 1))
             {
-                hasEvents = true;
+                hasLegacyEvents = true;
                 break;
             }
 
-            if (!hasEvents)
+            if (hasLegacyEvents)
+            {
+                await foreach (var legacyEntity in eventTable.QueryAsync<HistoricalEventEntity>(
+                    entity => entity.PartitionKey == LegacyEventPartitionKey))
+                {
+                    try
+                    {
+                        await eventTable.AddEntityAsync(new HistoricalEventEntity
+                        {
+                            PartitionKey = GetTimelinePartitionKey(DefaultTimelineId),
+                            RowKey = legacyEntity.RowKey,
+                            Title = legacyEntity.Title,
+                            Summary = legacyEntity.Summary,
+                            Description = legacyEntity.Description,
+                            ImageBlobName = legacyEntity.ImageBlobName,
+                            StartDate = legacyEntity.StartDate,
+                            EndDate = legacyEntity.EndDate
+                        });
+                    }
+                    catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status409Conflict)
+                    {
+                    }
+                }
+            }
+            else if (!await HasEventsAsync(DefaultTimelineId))
             {
                 foreach (var historicalEvent in SeedEvents)
                 {
                     try
                     {
-                        await eventTable.AddEntityAsync(ToEntity(historicalEvent));
+                        await eventTable.AddEntityAsync(ToEntity(DefaultTimelineId, historicalEvent));
                     }
                     catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status409Conflict)
                     {
@@ -158,10 +259,38 @@ public sealed class HistoricalEventStore
         }
     }
 
-    private static HistoricalEventEntity ToEntity(HistoricalEvent historicalEvent) =>
+    private async Task CreateDefaultTimelineAsync()
+    {
+        try
+        {
+            await timelineTable.AddEntityAsync(new TimelineTopicEntity
+            {
+                PartitionKey = TimelinePartitionKey,
+                RowKey = DefaultTimelineId.ToString("N"),
+                Title = DefaultTimelineTitle
+            });
+        }
+        catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status409Conflict)
+        {
+        }
+    }
+
+    private async Task<bool> HasEventsAsync(Guid timelineId)
+    {
+        await foreach (var _ in eventTable.QueryAsync<HistoricalEventEntity>(
+            entity => entity.PartitionKey == GetTimelinePartitionKey(timelineId),
+            maxPerPage: 1))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static HistoricalEventEntity ToEntity(Guid timelineId, HistoricalEvent historicalEvent) =>
         new()
         {
-            PartitionKey = PartitionKey,
+            PartitionKey = GetTimelinePartitionKey(timelineId),
             RowKey = historicalEvent.Id.ToString("N"),
             Title = historicalEvent.Title,
             Summary = historicalEvent.Summary,
@@ -173,7 +302,7 @@ public sealed class HistoricalEventStore
             EndDate = historicalEvent.EndDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)
         };
 
-    private static HistoricalEvent ToModel(HistoricalEventEntity entity) =>
+    private static HistoricalEvent ToModel(Guid timelineId, HistoricalEventEntity entity) =>
         new()
         {
             Id = Guid.ParseExact(entity.RowKey, "N"),
@@ -182,10 +311,19 @@ public sealed class HistoricalEventStore
             Description = entity.Description,
             ImageUrl = entity.ImageBlobName is null
                 ? null
-                : $"/api/historical-events/images/{entity.ImageBlobName}",
+                : $"/api/timelines/{timelineId:N}/historical-events/images/{entity.ImageBlobName}",
             StartDate = DateOnly.FromDateTime(entity.StartDate),
             EndDate = DateOnly.FromDateTime(entity.EndDate)
         };
+
+    private static TimelineTopic ToModel(TimelineTopicEntity entity) =>
+        new()
+        {
+            Id = Guid.ParseExact(entity.RowKey, "N"),
+            Title = entity.Title
+        };
+
+    private static string GetTimelinePartitionKey(Guid timelineId) => timelineId.ToString("N");
 
     private static string ValidateImage(IFormFile image)
     {

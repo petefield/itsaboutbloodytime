@@ -13,6 +13,18 @@ public sealed class HistoricalEvent
     public DateOnly EndDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 }
 
+public sealed class TimelineTopic
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+}
+
+public sealed class TimelineTopicForm
+{
+    [Required, StringLength(200)]
+    public string Title { get; set; } = string.Empty;
+}
+
 public sealed class HistoricalEventForm : IValidatableObject
 {
     [Required, StringLength(200)]

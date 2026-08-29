@@ -1,17 +1,31 @@
 @page "/"
 @inject HttpClient Http
 
-<PageTitle>Historical Events</PageTitle>
+<PageTitle>Timeline topics</PageTitle>
 
 <section class="event-page">
     <div class="event-toolbar">
         <div>
-            <h1>Historical events</h1>
-            <p class="mb-0 text-muted">Record moments that shaped history.</p>
+            <h1>Timeline topics</h1>
+            <p class="mb-0 text-muted">Create a topic, then record the events that shaped it.</p>
         </div>
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-primary" href="timeline">View timeline</a>
-            <button class="btn btn-primary" @onclick="OpenCreate">Add event</button>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="h5">Create a timeline</h2>
+            @if (saveError is not null)
+            {
+                <div class="alert alert-danger">@saveError</div>
+            }
+            <EditForm Model="form" OnValidSubmit="CreateTimelineAsync" FormName="timeline-topic">
+                <DataAnnotationsValidator />
+                <div class="input-group">
+                    <InputText class="form-control" @bind-Value="form.Title" placeholder="Timeline title" aria-label="Timeline title" />
+                    <button class="btn btn-primary" type="submit" disabled="@saving">@(saving ? "Creating..." : "Create timeline")</button>
+                </div>
+                <ValidationMessage For="() => form.Title" />
+            </EditForm>
         </div>
     </div>
 
@@ -19,247 +33,74 @@
     {
         <div class="alert alert-danger">@loadError</div>
     }
-    else if (events is null)
+    else if (timelines is null)
     {
-        <p>Loading events...</p>
+        <p>Loading timelines...</p>
     }
-    else if (events.Count == 0)
+    else if (timelines.Count == 0)
     {
-        <p class="text-muted">No events have been added yet.</p>
+        <p class="text-muted">No timelines have been created yet.</p>
     }
     else
     {
-        <div class="table-responsive">
-            <table class="table table-hover align-middle event-table">
-                <thead>
-                    <tr>
-                        <th scope="col">Start date</th>
-                        <th scope="col">End date</th>
-                        <th scope="col">Title</th>
-                        <th scope="col">Summary</th>
-                        <th scope="col"><span class="visually-hidden">Actions</span></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var historicalEvent in events)
-                    {
-                        <tr>
-                            <td class="event-date">@historicalEvent.StartDate.ToString("d MMM yyyy")</td>
-                            <td class="event-date">@historicalEvent.EndDate.ToString("d MMM yyyy")</td>
-                            <td>
-                                <div class="event-title">
-                                    @if (historicalEvent.ImageUrl is not null)
-                                    {
-                                        <img src="@ApiUrl(historicalEvent.ImageUrl)" alt="" class="event-thumbnail" />
-                                    }
-                                    <span>@historicalEvent.Title</span>
-                                </div>
-                            </td>
-                            <td>@historicalEvent.Summary</td>
-                            <td class="event-actions">
-                                <button class="btn btn-sm btn-outline-primary" @onclick="() => Edit(historicalEvent)">Edit</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div class="list-group">
+            @foreach (var timeline in timelines)
+            {
+                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                   href="@($"timelines/{timeline.Id:N}")">
+                    <span>@timeline.Title</span>
+                    <span class="text-muted">Edit events <span aria-hidden="true">→</span></span>
+                </a>
+            }
         </div>
     }
 </section>
 
-@if (showEditor)
-{
-    <div class="modal-backdrop fade show"></div>
-    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="event-editor-title">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="event-editor-title">@(editingId is null ? "Add an event" : "Edit event")</h2>
-                    <button type="button" class="btn-close" aria-label="Close" @onclick="ResetForm"></button>
-                </div>
-                <div class="modal-body">
-            @if (saveError is not null)
-            {
-                <div class="alert alert-danger">@saveError</div>
-            }
-            <EditForm Model="form" OnValidSubmit="SaveAsync" FormName="historical-event">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-                <div class="mb-3">
-                    <label class="form-label" for="title">Title</label>
-                    <InputText id="title" class="form-control" @bind-Value="form.Title" />
-                    <ValidationMessage For="() => form.Title" />
-                </div>
-                <div class="mb-3">
-                    <label class="form-label" for="summary">Summary</label>
-                    <InputTextArea id="summary" class="form-control" @bind-Value="form.Summary" />
-                    <ValidationMessage For="() => form.Summary" />
-                </div>
-                <div class="mb-3">
-                    <label class="form-label" for="description">Description</label>
-                    <InputTextArea id="description" class="form-control" rows="6" @bind-Value="form.Description" />
-                    <ValidationMessage For="() => form.Description" />
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label" for="start-date">Start date</label>
-                        <InputDate id="start-date" class="form-control" @bind-Value="form.StartDate" />
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label" for="end-date">End date</label>
-                        <InputDate id="end-date" class="form-control" @bind-Value="form.EndDate" />
-                        <ValidationMessage For="() => form.EndDate" />
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label" for="image">Image @(editingId is null ? "" : "(optional)")</label>
-                    @if (editingImageUrl is not null)
-                    {
-                        <div class="mb-2">
-                            <img src="@ApiUrl(editingImageUrl)" alt="Current image" class="editor-image" />
-                        </div>
-                    }
-                    <InputFile id="image" class="form-control" OnChange="SelectImage" accept="image/jpeg,image/png,image/gif,image/webp" />
-                    @if (imageError is not null)
-                    {
-                        <div class="validation-message">@imageError</div>
-                    }
-                    else if (selectedImage is not null)
-                    {
-                        <div class="form-text">Selected image: @selectedImage.Name</div>
-                    }
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-primary" type="submit" disabled="@saving">@(saving ? "Saving..." : "Save event")</button>
-                    <button class="btn btn-outline-secondary" type="button" @onclick="ResetForm">Cancel</button>
-                </div>
-            </EditForm>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
 @code {
-    private const long MaximumImageSize = 5 * 1024 * 1024;
-    private List<HistoricalEvent>? events;
-    private HistoricalEventForm form = new();
-    private IBrowserFile? selectedImage;
-    private Guid? editingId;
-    private string? editingImageUrl;
-    private bool showEditor;
+    private List<TimelineTopic>? timelines;
+    private TimelineTopicForm form = new();
     private bool saving;
     private string? loadError;
     private string? saveError;
-    private string? imageError;
 
-    protected override async Task OnInitializedAsync() => await LoadEventsAsync();
+    protected override async Task OnInitializedAsync() => await LoadTimelinesAsync();
 
-    private async Task LoadEventsAsync()
+    private async Task LoadTimelinesAsync()
     {
+        loadError = null;
         try
         {
-            events = await Http.GetFromJsonAsync<List<HistoricalEvent>>("api/historical-events") ?? [];
+            timelines = await Http.GetFromJsonAsync<List<TimelineTopic>>("api/timelines") ?? [];
         }
         catch (HttpRequestException)
         {
-            loadError = "The events service is unavailable. Start the API and try again.";
+            loadError = "The timelines service is unavailable. Start the API and try again.";
         }
     }
 
-    private void SelectImage(InputFileChangeEventArgs args)
-    {
-        selectedImage = args.File;
-        imageError = selectedImage.Size > MaximumImageSize ? "Images must be 5 MB or smaller." : null;
-    }
-
-    private async Task SaveAsync()
+    private async Task CreateTimelineAsync()
     {
         saveError = null;
-        if (editingId is null && selectedImage is null)
-        {
-            imageError = "An image is required.";
-            return;
-        }
-
-        if (imageError is not null)
-        {
-            return;
-        }
-
         saving = true;
-        using var content = new MultipartFormDataContent();
-        content.Add(new StringContent(form.Title), "title");
-        content.Add(new StringContent(form.Summary), "summary");
-        content.Add(new StringContent(form.Description), "description");
-        content.Add(new StringContent(form.StartDate.ToString("yyyy-MM-dd")), "startDate");
-        content.Add(new StringContent(form.EndDate.ToString("yyyy-MM-dd")), "endDate");
-        if (selectedImage is not null)
-        {
-            var imageContent = new StreamContent(selectedImage.OpenReadStream(MaximumImageSize));
-            imageContent.Headers.ContentType = new(selectedImage.ContentType);
-            content.Add(imageContent, "image", selectedImage.Name);
-        }
-
         try
         {
-            using var response = editingId is null
-                ? await Http.PostAsync("api/historical-events", content)
-                : await Http.PutAsync($"api/historical-events/{editingId}", content);
-
+            using var response = await Http.PostAsJsonAsync("api/timelines", form);
             if (!response.IsSuccessStatusCode)
             {
-                saveError = "The event could not be saved. Check the information and try again.";
+                saveError = "The timeline could not be created. Check the title and try again.";
                 return;
             }
 
-            ResetForm();
-            await LoadEventsAsync();
+            form = new TimelineTopicForm();
+            await LoadTimelinesAsync();
         }
         catch (HttpRequestException)
         {
-            saveError = "The events service is unavailable. Start the API and try again.";
+            saveError = "The timelines service is unavailable. Start the API and try again.";
         }
         finally
         {
             saving = false;
         }
     }
-
-    private void Edit(HistoricalEvent historicalEvent)
-    {
-        editingId = historicalEvent.Id;
-        form = new HistoricalEventForm
-        {
-            Title = historicalEvent.Title,
-            Summary = historicalEvent.Summary,
-            Description = historicalEvent.Description,
-            StartDate = historicalEvent.StartDate,
-            EndDate = historicalEvent.EndDate
-        };
-        selectedImage = null;
-        editingImageUrl = historicalEvent.ImageUrl;
-        imageError = null;
-        saveError = null;
-        showEditor = true;
-    }
-
-    private void OpenCreate()
-    {
-        ResetForm();
-        showEditor = true;
-    }
-
-    private void ResetForm()
-    {
-        editingId = null;
-        form = new HistoricalEventForm();
-        selectedImage = null;
-        editingImageUrl = null;
-        imageError = null;
-        saveError = null;
-        showEditor = false;
-    }
-
-    private string ApiUrl(string relativeUrl) => new Uri(Http.BaseAddress!, relativeUrl).ToString();
 }

@@ -11,22 +11,42 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
 {
     [Function(nameof(GetHistoricalEvents))]
     public async Task<IActionResult> GetHistoricalEvents(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "historical-events")] HttpRequest request) =>
-        new OkObjectResult(await eventStore.GetAllAsync());
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "timelines/{timelineId:guid}/historical-events")] HttpRequest request,
+        Guid timelineId)
+    {
+        if (!await eventStore.TimelineExistsAsync(timelineId))
+        {
+            return new NotFoundResult();
+        }
+
+        return new OkObjectResult(await eventStore.GetAllAsync(timelineId));
+    }
 
     [Function(nameof(GetHistoricalEvent))]
     public async Task<IActionResult> GetHistoricalEvent(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "historical-events/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "timelines/{timelineId:guid}/historical-events/{id:guid}")] HttpRequest request,
+        Guid timelineId,
         Guid id)
     {
-        var historicalEvent = await eventStore.GetAsync(id);
+        if (!await eventStore.TimelineExistsAsync(timelineId))
+        {
+            return new NotFoundResult();
+        }
+
+        var historicalEvent = await eventStore.GetAsync(timelineId, id);
         return historicalEvent is null ? new NotFoundResult() : new OkObjectResult(historicalEvent);
     }
 
     [Function(nameof(CreateHistoricalEvent))]
     public async Task<IActionResult> CreateHistoricalEvent(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "historical-events")] HttpRequest request)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "timelines/{timelineId:guid}/historical-events")] HttpRequest request,
+        Guid timelineId)
     {
+        if (!await eventStore.TimelineExistsAsync(timelineId))
+        {
+            return new NotFoundResult();
+        }
+
         var (eventRequest, error) = await ReadEventRequestAsync(request);
         if (error is not null)
         {
@@ -41,7 +61,7 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
         try
         {
             var imageBlobName = await eventStore.UploadImageAsync(eventRequest.Image);
-            var historicalEvent = await eventStore.AddAsync(new HistoricalEvent
+            var historicalEvent = await eventStore.AddAsync(timelineId, new HistoricalEvent
             {
                 Id = Guid.NewGuid(),
                 Title = eventRequest.Title,
@@ -52,7 +72,7 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
                 EndDate = eventRequest.EndDate
             });
 
-            return new CreatedResult($"/api/historical-events/{historicalEvent.Id}", historicalEvent);
+            return new CreatedResult($"/api/timelines/{timelineId:N}/historical-events/{historicalEvent.Id:N}", historicalEvent);
         }
         catch (HistoricalEventStore.ImageValidationException exception)
         {
@@ -62,10 +82,16 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
 
     [Function(nameof(UpdateHistoricalEvent))]
     public async Task<IActionResult> UpdateHistoricalEvent(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "historical-events/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "timelines/{timelineId:guid}/historical-events/{id:guid}")] HttpRequest request,
+        Guid timelineId,
         Guid id)
     {
-        var existing = await eventStore.GetAsync(id);
+        if (!await eventStore.TimelineExistsAsync(timelineId))
+        {
+            return new NotFoundResult();
+        }
+
+        var existing = await eventStore.GetAsync(timelineId, id);
         if (existing is null)
         {
             return new NotFoundResult();
@@ -93,12 +119,12 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
                 EndDate = eventRequest.EndDate
             };
 
-            if (!await eventStore.UpdateAsync(historicalEvent))
+            if (!await eventStore.UpdateAsync(timelineId, historicalEvent))
             {
                 return new NotFoundResult();
             }
 
-            return new OkObjectResult(await eventStore.GetAsync(id));
+            return new OkObjectResult(await eventStore.GetAsync(timelineId, id));
         }
         catch (HistoricalEventStore.ImageValidationException exception)
         {
@@ -108,10 +134,11 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
 
     [Function(nameof(GetHistoricalEventImage))]
     public async Task<IActionResult> GetHistoricalEventImage(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "historical-events/images/{blobName}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "timelines/{timelineId:guid}/historical-events/images/{blobName}")] HttpRequest request,
+        Guid timelineId,
         string blobName)
     {
-        var image = await eventStore.DownloadImageAsync(blobName);
+        var image = await eventStore.DownloadImageAsync(timelineId, blobName);
         return image is null
             ? new NotFoundResult()
             : new FileStreamResult(image.Content, image.Details.ContentType);
