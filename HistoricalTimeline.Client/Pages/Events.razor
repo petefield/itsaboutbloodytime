@@ -131,9 +131,23 @@
                                 <div class="form-text">Selected image: @selectedImage.Name</div>
                             }
                         </div>
+                        @if (confirmingDelete)
+                        {
+                            <div class="alert alert-danger">
+                                <p class="mb-2">Delete this event permanently? Its image will also be removed.</p>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-danger" type="button" @onclick="DeleteAsync" disabled="@deleting">@(deleting ? "Deleting..." : "Delete event")</button>
+                                    <button class="btn btn-outline-secondary" type="button" @onclick="CancelDelete" disabled="@deleting">Keep event</button>
+                                </div>
+                            </div>
+                        }
                         <div class="d-flex gap-2">
                             <button class="btn btn-primary" type="submit" disabled="@saving">@(saving ? "Saving..." : "Save event")</button>
                             <button class="btn btn-outline-secondary" type="button" @onclick="ResetForm">Cancel</button>
+                            @if (editingId is not null && !confirmingDelete)
+                            {
+                                <button class="btn btn-outline-danger ms-auto" type="button" @onclick="ConfirmDelete">Delete event</button>
+                            }
                         </div>
                     </EditForm>
                 </div>
@@ -217,6 +231,8 @@
     private bool showEditor;
     private bool showTimelineEditor;
     private bool saving;
+    private bool deleting;
+    private bool confirmingDelete;
     private bool timelineSaving;
     private string? loadError;
     private string? saveError;
@@ -340,6 +356,7 @@
         editingImageUrl = historicalEvent.ImageUrl;
         imageError = null;
         saveError = null;
+        confirmingDelete = false;
         showEditor = true;
     }
 
@@ -426,7 +443,45 @@
         editingImageUrl = null;
         imageError = null;
         saveError = null;
+        deleting = false;
+        confirmingDelete = false;
         showEditor = false;
+    }
+
+    private void ConfirmDelete() => confirmingDelete = true;
+
+    private void CancelDelete() => confirmingDelete = false;
+
+    private async Task DeleteAsync()
+    {
+        if (editingId is null)
+        {
+            return;
+        }
+
+        deleting = true;
+        saveError = null;
+        try
+        {
+            using var response = await Http.DeleteAsync(
+                $"api/timelines/{TimelineId:N}/historical-events/{editingId:N}");
+            if (!response.IsSuccessStatusCode)
+            {
+                saveError = "The event could not be deleted. Try again.";
+                return;
+            }
+
+            ResetForm();
+            await LoadEventsAsync();
+        }
+        catch (HttpRequestException)
+        {
+            saveError = "The events service is unavailable. Start the API and try again.";
+        }
+        finally
+        {
+            deleting = false;
+        }
     }
 
     private string ApiUrl(string relativeUrl) => new Uri(Http.BaseAddress!, relativeUrl).ToString();

@@ -155,6 +155,30 @@ public sealed class HistoricalEventStore
         }
     }
 
+    public async Task<bool> DeleteAsync(Guid timelineId, Guid id)
+    {
+        await EnsureInitializedAsync();
+
+        try
+        {
+            var existing = await eventTable.GetEntityAsync<HistoricalEventEntity>(
+                GetTimelinePartitionKey(timelineId),
+                id.ToString("N"));
+            await eventTable.DeleteEntityAsync(existing.Value.PartitionKey, existing.Value.RowKey);
+
+            if (existing.Value.ImageBlobName is not null)
+            {
+                await imageContainer.GetBlobClient(existing.Value.ImageBlobName).DeleteIfExistsAsync();
+            }
+
+            return true;
+        }
+        catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
+        {
+            return false;
+        }
+    }
+
     public async Task<string> UploadImageAsync(IFormFile image)
     {
         var extension = ValidateImage(image);

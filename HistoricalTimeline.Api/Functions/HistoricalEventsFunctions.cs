@@ -129,6 +129,22 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
         }
     }
 
+    [Function(nameof(DeleteHistoricalEvent))]
+    public async Task<IActionResult> DeleteHistoricalEvent(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "timelines/{timelineId:guid}/historical-events/{id:guid}")] HttpRequest request,
+        Guid timelineId,
+        Guid id)
+    {
+        if (!await eventStore.TimelineExistsAsync(timelineId))
+        {
+            return new NotFoundResult();
+        }
+
+        return await eventStore.DeleteAsync(timelineId, id)
+            ? new NoContentResult()
+            : new NotFoundResult();
+    }
+
     [Function(nameof(GetHistoricalEventImage))]
     public async Task<IActionResult> GetHistoricalEventImage(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "timelines/{timelineId:guid}/historical-events/images/{blobName}")] HttpRequest request,
