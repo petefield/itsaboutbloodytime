@@ -53,14 +53,11 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
             return error;
         }
 
-        if (eventRequest!.Image is null)
-        {
-            return ValidationError("image", "An image is required.");
-        }
-
         try
         {
-            var imageBlobName = await eventStore.UploadImageAsync(eventRequest.Image);
+            var imageBlobName = eventRequest!.Image is null
+                ? null
+                : await eventStore.UploadImageAsync(eventRequest.Image);
             var historicalEvent = await eventStore.AddAsync(timelineId, new HistoricalEvent
             {
                 Id = Guid.NewGuid(),

@@ -206,12 +206,6 @@
     private async Task SaveAsync()
     {
         saveError = null;
-        if (editingId is null && selectedImage is null)
-        {
-            imageError = "An image is required.";
-            return;
-        }
-
         if (imageError is not null)
         {
             return;
