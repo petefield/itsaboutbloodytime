@@ -69,24 +69,24 @@
             <aside class="event-preview" aria-live="polite">
                 @if (SelectedEvent is { } selectedEvent)
                 {
-                    <section class="event-selection-toolbar" aria-label="Selected event actions">
-                        <div class="event-selection-summary">
-                            <strong>1 event selected</strong>
-                            <span>@selectedEvent.Title</span>
-                        </div>
-                        <div class="event-selection-actions">
-                            <button class="event-selection-action" type="button" @onclick="EditSelectedEvent">
-                                <span class="event-selection-action-icon" aria-hidden="true">✎</span>
-                                <span>Edit</span>
-                            </button>
-                            <button class="event-selection-action event-selection-action-danger" type="button" @onclick="DeleteSelectedEvent">
-                                <span class="event-selection-action-icon" aria-hidden="true">⌫</span>
-                                <span>Delete</span>
-                            </button>
-                        </div>
-                        <button class="event-selection-clear" type="button" @onclick="ClearSelection" aria-label="Clear event selection">&times;</button>
-                    </section>
                     <article class="event-preview-content">
+                        <section class="event-selection-toolbar" aria-label="Selected event actions">
+                            <div class="event-selection-summary">
+                                <strong>1 event selected</strong>
+                                <span>@selectedEvent.Title</span>
+                            </div>
+                            <div class="event-selection-actions">
+                                <button class="event-selection-action" type="button" @onclick="EditSelectedEvent">
+                                    <span class="event-selection-action-icon" aria-hidden="true">✎</span>
+                                    <span>Edit</span>
+                                </button>
+                                <button class="event-selection-action event-selection-action-danger" type="button" @onclick="DeleteSelectedEvent">
+                                    <span class="event-selection-action-icon" aria-hidden="true">⌫</span>
+                                    <span>Delete</span>
+                                </button>
+                            </div>
+                            <button class="event-selection-clear" type="button" @onclick="ClearSelection" aria-label="Clear event selection">&times;</button>
+                        </section>
                         @if (selectedEvent.ImageUrl is not null)
                         {
                             <img src="@ApiUrl(selectedEvent.ImageUrl)" alt="" class="event-preview-image" />
