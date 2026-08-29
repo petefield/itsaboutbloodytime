@@ -187,6 +187,24 @@ a, .btn-link {
     line-height: 1.7;
 }
 
+.about-guide {
+    display: grid;
+    gap: 1rem;
+}
+
+.about-panel p + p {
+    margin-top: 1rem;
+}
+
+.about-panel ul {
+    display: grid;
+    gap: 0.5rem;
+    margin: 1rem 0 0;
+    padding-left: 1.25rem;
+    color: #566b93;
+    line-height: 1.6;
+}
+
 .support-guide {
     display: grid;
     grid-template-columns: 1fr;
