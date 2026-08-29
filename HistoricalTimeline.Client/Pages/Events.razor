@@ -8,7 +8,7 @@
         <div>
             <p class="eyebrow">Timeline editor</p>
             <h1>@(timeline?.Title ?? "Timeline events")</h1>
-            <p class="page-introduction">Record moments that shaped this timeline.</p>
+            <p class="page-introduction">@(string.IsNullOrWhiteSpace(timeline?.Description) ? "Add a description to introduce this timeline." : timeline.Description)</p>
         </div>
         <div class="toolbar-actions">
             <a class="btn btn-outline-secondary" href="">All timelines</a>
