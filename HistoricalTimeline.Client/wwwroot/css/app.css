@@ -273,6 +273,7 @@ h1 {
 }
 
 .timeline-track {
+    flex: 0 0 auto;
     position: relative;
 }
 
