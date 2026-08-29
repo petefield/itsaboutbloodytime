@@ -31,7 +31,7 @@
     }
     else
     {
-        <div class="event-editor-columns">
+        <div class="event-editor-columns @(SelectedEvent is null ? null : "event-editor-columns-selected")">
             <div class="event-table-surface table-responsive">
                 <table class="table table-hover align-middle event-table">
                     <thead>
@@ -66,9 +66,9 @@
                     </tbody>
                 </table>
             </div>
-            <aside class="event-preview" aria-live="polite">
-                @if (SelectedEvent is { } selectedEvent)
-                {
+            @if (SelectedEvent is { } selectedEvent)
+            {
+                <aside class="event-preview" aria-live="polite">
                     <article class="event-preview-content">
                         <section class="event-selection-toolbar" aria-label="Selected event actions">
                             <div class="event-selection-summary">
@@ -99,15 +99,8 @@
                         <p class="event-preview-summary">@selectedEvent.Summary</p>
                         <p class="event-preview-description">@selectedEvent.Description</p>
                     </article>
-                }
-                else
-                {
-                    <div class="event-preview-empty">
-                        <span aria-hidden="true">←</span>
-                        <p>Select an event to preview its details and available actions.</p>
-                    </div>
-                }
-            </aside>
+                </aside>
+            }
         </div>
     }
 </section>

@@ -558,9 +558,13 @@ h1 {
 
 .event-editor-columns {
     display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(20rem, 0.75fr);
+    grid-template-columns: 1fr;
     gap: 1.5rem;
     align-items: start;
+}
+
+.event-editor-columns-selected {
+    grid-template-columns: minmax(0, 1.25fr) minmax(20rem, 0.75fr);
 }
 
 .event-selectable-row {
@@ -705,25 +709,6 @@ h1 {
     color: #566b93;
     line-height: 1.6;
     white-space: pre-line;
-}
-
-.event-preview-empty {
-    display: grid;
-    min-height: 16rem;
-    place-content: center;
-    padding: 2rem;
-    color: #566b93;
-    text-align: center;
-}
-
-.event-preview-empty span {
-    color: #176ee9;
-    font-size: 2rem;
-}
-
-.event-preview-empty p {
-    max-width: 14rem;
-    margin: 0.75rem 0 0;
 }
 
 .timeline-scroll {
@@ -958,7 +943,7 @@ h1 {
         justify-content: flex-start;
     }
 
-    .event-editor-columns {
+    .event-editor-columns-selected {
         grid-template-columns: 1fr;
     }
 
