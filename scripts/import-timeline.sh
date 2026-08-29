@@ -122,6 +122,7 @@ fi
 
 declare -a image_paths=()
 declare -a image_mime_types=()
+declare -a image_extensions=()
 
 progress "Preparing images for ${#event_records[@]} events"
 for index in "${!event_records[@]}"; do
@@ -225,7 +226,10 @@ for index in "${!event_records[@]}"; do
         continue
     fi
     case "$mime_type" in
-        image/jpeg|image/png|image/gif|image/webp) ;;
+        image/jpeg) image_extension=jpg ;;
+        image/png) image_extension=png ;;
+        image/gif) image_extension=gif ;;
+        image/webp) image_extension=webp ;;
         *)
             printf 'Unsupported image type for event %d: %s; importing without it.\n' "$((index + 1))" "$mime_type" >&2
             image_paths[$index]=''
@@ -236,6 +240,7 @@ for index in "${!event_records[@]}"; do
 
     image_paths[$index]=$image_path
     image_mime_types[$index]=$mime_type
+    image_extensions[$index]=$image_extension
     printf '    Image ready.\n'
 done
 
@@ -267,12 +272,33 @@ for index in "${!event_records[@]}"; do
         --form-string "startDate=$start_date"
         --form-string "endDate=$end_date"
     )
+    event_url="$api_base_url/timelines/$timeline_id/historical-events"
+    response_file="$temporary_directory/event-response-$index.json"
+    event_uploaded=false
+    printf '  [%d/%d] Uploading: %s\n' "$((index + 1))" "${#event_records[@]}" "$title"
     if [[ -n "${image_paths[$index]}" ]]; then
-        curl_arguments+=(--form "image=@${image_paths[$index]};type=${image_mime_types[$index]}")
+        image_curl_arguments=(
+            "${curl_arguments[@]}"
+            --form "image=@${image_paths[$index]};filename=event-image.${image_extensions[$index]};type=${image_mime_types[$index]}"
+        )
+        if response_status=$(curl "${image_curl_arguments[@]}" "$event_url" --output "$response_file" --write-out '%{http_code}'); then
+            event_uploaded=true
+        elif [[ "$response_status" == "400" ]]; then
+            printf '    Image was rejected by the API; retrying event without it.\n' >&2
+        else
+            error_response=$(jq --compact-output . "$response_file" 2>/dev/null || cat "$response_file")
+            printf 'Unable to upload event %d (HTTP %s): %s\n' "$((index + 1))" "$response_status" "$error_response" >&2
+            exit 1
+        fi
     fi
 
-    printf '  [%d/%d] Uploading: %s\n' "$((index + 1))" "${#event_records[@]}" "$title"
-    curl "${curl_arguments[@]}" "$api_base_url/timelines/$timeline_id/historical-events" >/dev/null
+    if [[ "$event_uploaded" != true ]]; then
+        if ! response_status=$(curl "${curl_arguments[@]}" "$event_url" --output "$response_file" --write-out '%{http_code}'); then
+            error_response=$(jq --compact-output . "$response_file" 2>/dev/null || cat "$response_file")
+            printf 'Unable to upload event %d (HTTP %s): %s\n' "$((index + 1))" "$response_status" "$error_response" >&2
+            exit 1
+        fi
+    fi
 done
 
 printf '\nImported %d events into timeline %s.\n' "${#event_records[@]}" "$timeline_id"
