@@ -13,6 +13,7 @@
         <div class="toolbar-actions">
             <a class="btn btn-outline-secondary" href="">All timelines</a>
             <a class="btn btn-outline-primary" href="@($"timelines/{TimelineId:N}/timeline")">View timeline</a>
+            <button class="btn btn-outline-primary" @onclick="OpenTimelineEditor" disabled="@(timeline is null)">Edit timeline</button>
             <button class="btn btn-primary" @onclick="OpenCreate">Add event</button>
         </div>
     </div>
@@ -142,6 +143,63 @@
     </div>
 }
 
+@if (showTimelineEditor)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="timeline-editor-title">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="timeline-editor-title">Edit timeline</h2>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseTimelineEditor"></button>
+                </div>
+                <div class="modal-body">
+                    @if (timelineSaveError is not null)
+                    {
+                        <div class="alert alert-danger">@timelineSaveError</div>
+                    }
+                    <EditForm Model="timelineForm" OnValidSubmit="SaveTimelineAsync" FormName="timeline-metadata">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="mb-3">
+                            <label class="form-label" for="timeline-title">Title</label>
+                            <InputText id="timeline-title" class="form-control" @bind-Value="timelineForm.Title" />
+                            <ValidationMessage For="() => timelineForm.Title" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="timeline-description">Description</label>
+                            <InputTextArea id="timeline-description" class="form-control" rows="4" @bind-Value="timelineForm.Description" />
+                            <ValidationMessage For="() => timelineForm.Description" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="timeline-image">Image (optional)</label>
+                            @if (timelineImageUrl is not null)
+                            {
+                                <div class="mb-2">
+                                    <img src="@ApiUrl(timelineImageUrl)" alt="Current timeline image" class="editor-image" />
+                                </div>
+                            }
+                            <InputFile id="timeline-image" class="form-control" OnChange="SelectTimelineImage" accept="image/jpeg,image/png,image/gif,image/webp" />
+                            @if (timelineImageError is not null)
+                            {
+                                <div class="validation-message">@timelineImageError</div>
+                            }
+                            else if (selectedTimelineImage is not null)
+                            {
+                                <div class="form-text">Selected image: @selectedTimelineImage.Name</div>
+                            }
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary" type="submit" disabled="@timelineSaving">@(timelineSaving ? "Saving..." : "Save timeline")</button>
+                            <button class="btn btn-outline-secondary" type="button" @onclick="CloseTimelineEditor">Cancel</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private const long MaximumImageSize = 5 * 1024 * 1024;
 
@@ -151,14 +209,21 @@
     private TimelineTopic? timeline;
     private List<HistoricalEvent>? events;
     private HistoricalEventForm form = new();
+    private TimelineTopicForm timelineForm = new();
     private IBrowserFile? selectedImage;
+    private IBrowserFile? selectedTimelineImage;
     private Guid? editingId;
     private string? editingImageUrl;
+    private string? timelineImageUrl;
     private bool showEditor;
+    private bool showTimelineEditor;
     private bool saving;
+    private bool timelineSaving;
     private string? loadError;
     private string? saveError;
     private string? imageError;
+    private string? timelineSaveError;
+    private string? timelineImageError;
 
     protected override async Task OnParametersSetAsync() => await LoadTimelineAsync();
 
@@ -202,6 +267,14 @@
     {
         selectedImage = args.File;
         imageError = selectedImage.Size > MaximumImageSize ? "Images must be 5 MB or smaller." : null;
+    }
+
+    private void SelectTimelineImage(InputFileChangeEventArgs args)
+    {
+        selectedTimelineImage = args.File;
+        timelineImageError = selectedTimelineImage.Size > MaximumImageSize
+            ? "Images must be 5 MB or smaller."
+            : null;
     }
 
     private async Task SaveAsync()
@@ -275,6 +348,75 @@
     {
         ResetForm();
         showEditor = true;
+    }
+
+    private void OpenTimelineEditor()
+    {
+        if (timeline is null)
+        {
+            return;
+        }
+
+        timelineForm = new TimelineTopicForm
+        {
+            Title = timeline.Title,
+            Description = timeline.Description
+        };
+        selectedTimelineImage = null;
+        timelineImageUrl = timeline.ImageUrl;
+        timelineImageError = null;
+        timelineSaveError = null;
+        showTimelineEditor = true;
+    }
+
+    private void CloseTimelineEditor()
+    {
+        showTimelineEditor = false;
+        selectedTimelineImage = null;
+        timelineImageUrl = null;
+        timelineImageError = null;
+        timelineSaveError = null;
+    }
+
+    private async Task SaveTimelineAsync()
+    {
+        timelineSaveError = null;
+        if (timelineImageError is not null)
+        {
+            return;
+        }
+
+        timelineSaving = true;
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(timelineForm.Title), "title");
+        content.Add(new StringContent(timelineForm.Description), "description");
+        if (selectedTimelineImage is not null)
+        {
+            var imageContent = new StreamContent(selectedTimelineImage.OpenReadStream(MaximumImageSize));
+            imageContent.Headers.ContentType = new(selectedTimelineImage.ContentType);
+            content.Add(imageContent, "image", selectedTimelineImage.Name);
+        }
+
+        try
+        {
+            using var response = await Http.PutAsync($"api/timelines/{TimelineId:N}", content);
+            if (!response.IsSuccessStatusCode)
+            {
+                timelineSaveError = "The timeline could not be saved. Check the information and try again.";
+                return;
+            }
+
+            timeline = await response.Content.ReadFromJsonAsync<TimelineTopic>();
+            CloseTimelineEditor();
+        }
+        catch (HttpRequestException)
+        {
+            timelineSaveError = "The timelines service is unavailable. Start the API and try again.";
+        }
+        finally
+        {
+            timelineSaving = false;
+        }
     }
 
     private void ResetForm()
