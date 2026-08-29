@@ -567,6 +567,22 @@ h1 {
     grid-template-columns: minmax(0, 1.25fr) minmax(20rem, 0.75fr);
 }
 
+.event-table-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+}
+
+.empty-events {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.empty-events p {
+    margin: 0;
+}
+
 .event-selectable-row {
     cursor: pointer;
 }

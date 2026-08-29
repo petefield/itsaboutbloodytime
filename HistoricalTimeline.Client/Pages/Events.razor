@@ -13,7 +13,6 @@
         <div class="toolbar-actions">
             <a class="btn btn-outline-primary" href="@($"timelines/{TimelineId:N}/timeline")">View timeline</a>
             <button class="btn btn-outline-primary" @onclick="OpenTimelineEditor" disabled="@(timeline is null)">Edit timeline</button>
-            <button class="btn btn-primary" @onclick="OpenCreate">Add event</button>
         </div>
     </div>
 
@@ -27,44 +26,58 @@
     }
     else if (events.Count == 0)
     {
-        <p class="text-muted">No events have been added yet.</p>
+        <div class="empty-events">
+            <p class="text-muted">No events have been added yet.</p>
+            <button class="event-selection-action" type="button" @onclick="OpenCreate">
+                <span class="event-selection-action-icon" aria-hidden="true">+</span>
+                <span>Add event</span>
+            </button>
+        </div>
     }
     else
     {
         <div class="event-editor-columns @(SelectedEvent is null ? null : "event-editor-columns-selected")">
-            <div class="event-table-surface table-responsive">
-                <table class="table table-hover align-middle event-table">
-                    <thead>
-                        <tr>
-                            <th scope="col">Start date</th>
-                            <th scope="col">End date</th>
-                            <th scope="col">Title</th>
-                            <th scope="col">Summary</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var historicalEvent in events)
-                        {
-                            <tr class="event-selectable-row @(selectedEventId == historicalEvent.Id ? "event-row-selected" : null)"
-                                tabindex="0"
-                                @onclick="() => SelectEvent(historicalEvent.Id)"
-                                @onkeydown="(args) => SelectEventOnKeyDown(args, historicalEvent.Id)">
-                                <td class="event-date">@historicalEvent.StartDate.ToString("d MMM yyyy")</td>
-                                <td class="event-date">@historicalEvent.EndDate.ToString("d MMM yyyy")</td>
-                                <td>
-                                    <div class="event-title">
-                                        @if (historicalEvent.ImageUrl is not null)
-                                        {
-                                            <img src="@ApiUrl(historicalEvent.ImageUrl)" alt="" class="event-thumbnail" />
-                                        }
-                                        <span>@historicalEvent.Title</span>
-                                    </div>
-                                </td>
-                                <td>@historicalEvent.Summary</td>
+            <div>
+                <div class="event-table-actions">
+                    <button class="event-selection-action" type="button" @onclick="OpenCreate">
+                        <span class="event-selection-action-icon" aria-hidden="true">+</span>
+                        <span>Add event</span>
+                    </button>
+                </div>
+                <div class="event-table-surface table-responsive">
+                    <table class="table table-hover align-middle event-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Start date</th>
+                                <th scope="col">End date</th>
+                                <th scope="col">Title</th>
+                                <th scope="col">Summary</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var historicalEvent in events)
+                            {
+                                <tr class="event-selectable-row @(selectedEventId == historicalEvent.Id ? "event-row-selected" : null)"
+                                    tabindex="0"
+                                    @onclick="() => SelectEvent(historicalEvent.Id)"
+                                    @onkeydown="(args) => SelectEventOnKeyDown(args, historicalEvent.Id)">
+                                    <td class="event-date">@historicalEvent.StartDate.ToString("d MMM yyyy")</td>
+                                    <td class="event-date">@historicalEvent.EndDate.ToString("d MMM yyyy")</td>
+                                    <td>
+                                        <div class="event-title">
+                                            @if (historicalEvent.ImageUrl is not null)
+                                            {
+                                                <img src="@ApiUrl(historicalEvent.ImageUrl)" alt="" class="event-thumbnail" />
+                                            }
+                                            <span>@historicalEvent.Title</span>
+                                        </div>
+                                    </td>
+                                    <td>@historicalEvent.Summary</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
             @if (SelectedEvent is { } selectedEvent)
             {
