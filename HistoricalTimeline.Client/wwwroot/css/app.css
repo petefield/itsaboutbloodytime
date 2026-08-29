@@ -556,6 +556,92 @@ h1 {
     width: 1%;
 }
 
+.event-selection-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 1.25rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid #cfe0fb;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 0.6rem 1.4rem rgb(20 59 113 / 8%);
+}
+
+.event-selection-summary {
+    display: grid;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.event-selection-summary strong {
+    color: #071b42;
+    font-size: 1rem;
+}
+
+.event-selection-summary span {
+    overflow: hidden;
+    color: #566b93;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.event-selection-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.event-selection-action {
+    display: grid;
+    min-width: 4.75rem;
+    gap: 0.25rem;
+    place-items: center;
+    padding: 0.5rem;
+    border: 1px solid #d9e6fb;
+    border-radius: 0.7rem;
+    background: #fff;
+    color: #0969ec;
+    font-size: 0.8rem;
+}
+
+.event-selection-action:hover,
+.event-selection-action:focus {
+    border-color: #8bb7f9;
+    background: #f3f7ff;
+}
+
+.event-selection-action-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.event-selection-action-danger {
+    color: #dc3545;
+}
+
+.event-selection-clear {
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    place-items: center;
+    border: 1px solid #d9e6fb;
+    border-radius: 50%;
+    background: #fff;
+    color: #071b42;
+    font-size: 2rem;
+    font-weight: 300;
+    line-height: 1;
+}
+
+.event-selection-cell {
+    width: 1%;
+}
+
+.event-row-selected > * {
+    background-color: #f1f6ff !important;
+}
+
 .timeline-scroll {
     display: flex;
     flex: 1;
@@ -777,6 +863,15 @@ h1 {
     .create-timeline-panel {
         grid-template-columns: 1fr;
         gap: 1rem;
+    }
+
+    .event-selection-toolbar {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .event-selection-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
     }
 }
 
