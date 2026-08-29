@@ -65,6 +65,8 @@ a, .btn-link {
 }
 
 .content {
+    --content-horizontal-padding: 3rem;
+    container-type: inline-size;
     padding: 3.5rem 1.5rem 4rem;
 }
 
@@ -489,10 +491,10 @@ h1 {
 }
 
 .archive-hero.home-hero {
-    width: 100vw;
+    width: calc(100cqw + var(--content-horizontal-padding));
     min-height: 25rem;
-    margin: -3.5rem calc(50% - 50vw) 2.5rem;
-    padding: 4rem max(1rem, calc((100vw - 1160px) / 2));
+    margin: -3.5rem 0 2.5rem calc((100% - 100cqw) / 2 - 1.5rem);
+    padding: 4rem max(1rem, calc((100cqw + var(--content-horizontal-padding) - 1160px) / 2));
     background-image:
         linear-gradient(90deg, rgb(248 250 255 / 82%) 0%, rgb(248 250 255 / 30%) 48%, transparent 70%),
         url("../images/home-hero.png");
@@ -1077,11 +1079,13 @@ h1 {
 
 @media (max-width: 576px) {
     .content {
+        --content-horizontal-padding: 2rem;
         padding: 2.5rem 1rem 3rem;
     }
 
     .archive-hero.home-hero {
         margin-top: -2.5rem;
+        margin-left: calc((100% - 100cqw) / 2 - 1rem);
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -1091,8 +1095,11 @@ h1 {
     }
 
     .app-header-content {
+        align-items: flex-start;
+        flex-direction: column;
         width: calc(100% - 2rem);
-        min-height: 8.5rem;
+        min-height: auto;
+        padding: 1rem 0;
     }
 
     .app-brand {
@@ -1111,8 +1118,8 @@ h1 {
     }
 
     .app-navigation a {
-        padding: 0.7rem 0.85rem;
-        font-size: 0.875rem;
+        padding: 0.65rem 0.6rem;
+        font-size: 0.8rem;
     }
 
     .toolbar-actions {
