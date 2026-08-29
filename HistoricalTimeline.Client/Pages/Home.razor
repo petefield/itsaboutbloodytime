@@ -63,7 +63,7 @@
                 @foreach (var timeline in FilteredTimelines)
                 {
                     <article class="topic-card">
-                        <a class="topic-card-main" href="@($"timelines/{timeline.Id:N}")">
+                        <a class="topic-card-main" href="@($"timelines/{timeline.Id:N}/timeline")">
                             @if (timeline.ImageUrl is not null)
                             {
                                 <img src="@ApiUrl(timeline.ImageUrl)" alt="" class="topic-card-image" />
