@@ -578,33 +578,16 @@ h1 {
 
 .event-selection-toolbar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto;
     gap: 1.25rem;
     align-items: center;
+    justify-content: flex-start;
     margin-bottom: 1rem;
     padding: 1rem 1.25rem;
     border: 1px solid #cfe0fb;
     border-radius: 1rem;
     background: #fff;
     box-shadow: 0 0.6rem 1.4rem rgb(20 59 113 / 8%);
-}
-
-.event-selection-summary {
-    display: grid;
-    gap: 0.15rem;
-    min-width: 0;
-}
-
-.event-selection-summary strong {
-    color: #071b42;
-    font-size: 1rem;
-}
-
-.event-selection-summary span {
-    overflow: hidden;
-    color: #566b93;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .event-selection-actions {
