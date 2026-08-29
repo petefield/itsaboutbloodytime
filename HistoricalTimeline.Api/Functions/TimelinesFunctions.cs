@@ -91,6 +91,14 @@ public sealed class TimelinesFunctions(HistoricalEventStore eventStore)
         }
     }
 
+    [Function(nameof(DeleteTimeline))]
+    public async Task<IActionResult> DeleteTimeline(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "timelines/{timelineId:guid}")] HttpRequest request,
+        Guid timelineId) =>
+        await eventStore.DeleteTimelineAsync(timelineId)
+            ? new NoContentResult()
+            : new NotFoundResult();
+
     [Function(nameof(GetTimelineImage))]
     public async Task<IActionResult> GetTimelineImage(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "timelines/{timelineId:guid}/images/{blobName}")] HttpRequest request,

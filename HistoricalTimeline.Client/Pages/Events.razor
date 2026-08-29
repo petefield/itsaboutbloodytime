@@ -1,5 +1,6 @@
 @page "/timelines/{TimelineId:guid}"
 @inject HttpClient Http
+@inject NavigationManager Navigation
 
 <PageTitle>Timeline events</PageTitle>
 
@@ -18,6 +19,10 @@
             <button class="event-selection-action" type="button" @onclick="OpenTimelineEditor" disabled="@(timeline is null)">
                 <span class="event-selection-action-icon" aria-hidden="true">✎</span>
                 <span>Edit timeline</span>
+            </button>
+            <button class="event-selection-action event-selection-action-danger" type="button" @onclick="OpenTimelineDeleteConfirmation" disabled="@(timeline is null)">
+                <span class="event-selection-action-icon" aria-hidden="true">⌫</span>
+                <span>Delete timeline</span>
             </button>
         </div>
     </div>
@@ -277,6 +282,33 @@
     </div>
 }
 
+@if (timelinePendingDeletion is not null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="delete-timeline-title">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="delete-timeline-title">Delete timeline</h2>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CancelTimelineDelete" disabled="@timelineDeleting"></button>
+                </div>
+                <div class="modal-body">
+                    @if (timelineDeleteError is not null)
+                    {
+                        <div class="alert alert-danger">@timelineDeleteError</div>
+                    }
+                    <p>Are you sure you want to delete <strong>@timelinePendingDeletion.Title</strong>?</p>
+                    <p class="mb-0 text-muted">This permanently removes the timeline, all of its events, and all associated images.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" @onclick="CancelTimelineDelete" disabled="@timelineDeleting">Cancel</button>
+                    <button class="btn btn-danger" type="button" @onclick="DeleteTimelineAsync" disabled="@timelineDeleting">@(timelineDeleting ? "Deleting..." : "Delete timeline")</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private const long MaximumImageSize = 5 * 1024 * 1024;
 
@@ -294,17 +326,20 @@
     private string? editingImageUrl;
     private string? timelineImageUrl;
     private HistoricalEvent? eventPendingDeletion;
+    private TimelineTopic? timelinePendingDeletion;
     private bool showEditor;
     private bool showTimelineEditor;
     private bool saving;
     private bool deleting;
     private bool timelineSaving;
+    private bool timelineDeleting;
     private string? loadError;
     private string? saveError;
     private string? imageError;
     private string? deleteError;
     private string? timelineSaveError;
     private string? timelineImageError;
+    private string? timelineDeleteError;
     private HistoricalEvent? SelectedEvent =>
         events?.FirstOrDefault(historicalEvent => historicalEvent.Id == selectedEventId);
 
@@ -493,6 +528,51 @@
         timelineImageUrl = null;
         timelineImageError = null;
         timelineSaveError = null;
+    }
+
+    private void OpenTimelineDeleteConfirmation()
+    {
+        if (timeline is not null)
+        {
+            timelinePendingDeletion = timeline;
+            timelineDeleteError = null;
+        }
+    }
+
+    private void CancelTimelineDelete()
+    {
+        timelinePendingDeletion = null;
+        timelineDeleteError = null;
+    }
+
+    private async Task DeleteTimelineAsync()
+    {
+        if (timelinePendingDeletion is null)
+        {
+            return;
+        }
+
+        timelineDeleting = true;
+        timelineDeleteError = null;
+        try
+        {
+            using var response = await Http.DeleteAsync($"api/timelines/{TimelineId:N}");
+            if (!response.IsSuccessStatusCode)
+            {
+                timelineDeleteError = "The timeline could not be deleted. Try again.";
+                return;
+            }
+
+            Navigation.NavigateTo("");
+        }
+        catch (HttpRequestException)
+        {
+            timelineDeleteError = "The timelines service is unavailable. Start the API and try again.";
+        }
+        finally
+        {
+            timelineDeleting = false;
+        }
     }
 
     private async Task SaveTimelineAsync()

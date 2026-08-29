@@ -95,6 +95,57 @@ public sealed class HistoricalEventStore
         }
     }
 
+    public async Task<bool> DeleteTimelineAsync(Guid timelineId)
+    {
+        await EnsureInitializedAsync();
+
+        try
+        {
+            var timeline = await timelineTable.GetEntityAsync<TimelineTopicEntity>(
+                TimelinePartitionKey,
+                timelineId.ToString("N"));
+            var imageBlobNames = new HashSet<string>(StringComparer.Ordinal);
+            if (timeline.Value.ImageBlobName is not null)
+            {
+                imageBlobNames.Add(timeline.Value.ImageBlobName);
+            }
+
+            var eventsToDelete = new List<HistoricalEventEntity>();
+            await foreach (var historicalEvent in eventTable.QueryAsync<HistoricalEventEntity>(
+                entity => entity.PartitionKey == GetTimelinePartitionKey(timelineId)))
+            {
+                eventsToDelete.Add(historicalEvent);
+            }
+
+            foreach (var historicalEvent in eventsToDelete)
+            {
+                if (historicalEvent.ImageBlobName is not null)
+                {
+                    imageBlobNames.Add(historicalEvent.ImageBlobName);
+                }
+
+                await eventTable.DeleteEntityAsync(
+                    historicalEvent.PartitionKey,
+                    historicalEvent.RowKey);
+            }
+
+            await timelineTable.DeleteEntityAsync(
+                timeline.Value.PartitionKey,
+                timeline.Value.RowKey);
+
+            foreach (var imageBlobName in imageBlobNames)
+            {
+                await imageContainer.GetBlobClient(imageBlobName).DeleteIfExistsAsync();
+            }
+
+            return true;
+        }
+        catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
+        {
+            return false;
+        }
+    }
+
     public async Task<bool> TimelineExistsAsync(Guid timelineId) =>
         await GetTimelineAsync(timelineId) is not null;
 
