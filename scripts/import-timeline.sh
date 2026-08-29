@@ -4,6 +4,10 @@ set -euo pipefail
 readonly DEFAULT_API_BASE_URL="https://white-tree-0af7bee10.7.azurestaticapps.net/api"
 readonly MAXIMUM_IMAGE_SIZE=5242880
 
+progress() {
+    printf '\n==> %s\n' "$1"
+}
+
 usage() {
     cat <<'EOF'
 Usage: import-timeline.sh CSV_PATH [TIMELINE_TITLE] [TIMELINE_DESCRIPTION]
@@ -38,6 +42,7 @@ if [[ ! -f "$csv_path" ]]; then
     exit 1
 fi
 
+progress "Checking required tools"
 for command in curl file jq python3; do
     if ! command -v "$command" >/dev/null 2>&1; then
         printf 'Required command not found: %s\n' "$command" >&2
@@ -66,6 +71,7 @@ temporary_directory=$(mktemp -d "${TMPDIR:-/tmp}/timeline-import.XXXXXX")
 trap 'rm -rf -- "$temporary_directory"' EXIT
 
 records_file="$temporary_directory/events.jsonl"
+progress "Reading and validating CSV: $csv_filename"
 python3 - "$csv_path" >"$records_file" <<'PYTHON'
 import csv
 import json
@@ -117,9 +123,13 @@ fi
 declare -a image_paths=()
 declare -a image_mime_types=()
 
+progress "Preparing images for ${#event_records[@]} events"
 for index in "${!event_records[@]}"; do
+    title=$(jq -r '.title' <<<"${event_records[$index]}")
     image_url=$(jq -r '.image_url' <<<"${event_records[$index]}")
+    printf '  [%d/%d] %s\n' "$((index + 1))" "${#event_records[@]}" "$title"
     if [[ -z "$image_url" ]]; then
+        printf '    No image supplied; importing event without one.\n'
         image_paths[$index]=''
         image_mime_types[$index]=''
         continue
@@ -127,6 +137,7 @@ for index in "${!event_records[@]}"; do
 
     image_path="$temporary_directory/image-$index"
     if [[ "$image_url" == http://* || "$image_url" == https://* ]]; then
+        printf '    Downloading image...\n'
         if ! curl --fail --location --retry 3 --silent --show-error --output "$image_path" "$image_url"; then
             printf 'Unable to retrieve image for event %d; importing without it.\n' "$((index + 1))" >&2
             image_paths[$index]=''
@@ -134,6 +145,7 @@ for index in "${!event_records[@]}"; do
             continue
         fi
     else
+        printf '    Reading local image...\n'
         source_path=${image_url#file://}
         if [[ "$source_path" != /* ]]; then
             source_path="$csv_directory/$source_path"
@@ -224,15 +236,18 @@ for index in "${!event_records[@]}"; do
 
     image_paths[$index]=$image_path
     image_mime_types[$index]=$mime_type
+    printf '    Image ready.\n'
 done
 
-printf 'Creating timeline: %s\n' "$timeline_title"
+progress "Creating timeline: $timeline_title"
 timeline_response=$(curl --fail-with-body --silent --show-error \
     --request POST "$api_base_url/timelines" \
     --form-string "title=$timeline_title" \
     --form-string "description=$timeline_description")
 timeline_id=$(jq --exit-status --raw-output '.id' <<<"$timeline_response")
+printf 'Timeline created: %s\n' "$timeline_id"
 
+progress "Uploading ${#event_records[@]} events"
 for index in "${!event_records[@]}"; do
     event_record=${event_records[$index]}
     title=$(jq -r '.title' <<<"$event_record")
@@ -256,7 +271,7 @@ for index in "${!event_records[@]}"; do
         curl_arguments+=(--form "image=@${image_paths[$index]};type=${image_mime_types[$index]}")
     fi
 
-    printf 'Importing event %d of %d: %s\n' "$((index + 1))" "${#event_records[@]}" "$title"
+    printf '  [%d/%d] Uploading: %s\n' "$((index + 1))" "${#event_records[@]}" "$title"
     curl "${curl_arguments[@]}" "$api_base_url/timelines/$timeline_id/historical-events" >/dev/null
 done
 
