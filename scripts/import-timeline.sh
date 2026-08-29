@@ -1,0 +1,194 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly DEFAULT_API_BASE_URL="https://white-tree-0af7bee10.7.azurestaticapps.net/api"
+readonly MAXIMUM_IMAGE_SIZE=5242880
+
+usage() {
+    cat <<'EOF'
+Usage: import-timeline.sh CSV_PATH [TIMELINE_TITLE] [TIMELINE_DESCRIPTION]
+
+Creates a timeline and imports every CSV row as an event. The CSV must contain:
+  start_date, end_date, title, summary, full_description
+
+The optional image_url column may contain an HTTP(S) URL, a file:// URL, or a
+path relative to the CSV file. Each image is uploaded with its event.
+
+Set API_BASE_URL to target a different API endpoint. It defaults to the
+deployed API:
+  https://white-tree-0af7bee10.7.azurestaticapps.net/api
+EOF
+}
+
+if [[ $# -eq 0 || "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    usage
+    exit 0
+fi
+
+if [[ $# -gt 3 ]]; then
+    usage >&2
+    exit 1
+fi
+
+csv_path=$1
+if [[ ! -f "$csv_path" ]]; then
+    printf 'CSV file not found: %s\n' "$csv_path" >&2
+    exit 1
+fi
+
+for command in curl file jq python3; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'Required command not found: %s\n' "$command" >&2
+        exit 1
+    fi
+done
+
+csv_path=$(cd "$(dirname "$csv_path")" && pwd)/$(basename "$csv_path")
+csv_directory=$(dirname "$csv_path")
+csv_filename=$(basename "$csv_path")
+filename_stem=${csv_filename%.csv}
+filename_stem=${filename_stem%_significant_events}
+default_title=${filename_stem//_/ }
+default_title=${default_title//-/ }
+timeline_title=${2:-"$default_title"}
+timeline_description=${3:-"Imported from ${csv_filename}."}
+api_base_url=${API_BASE_URL:-"$DEFAULT_API_BASE_URL"}
+api_base_url=${api_base_url%/}
+
+if [[ ${#timeline_title} -gt 200 || ${#timeline_description} -gt 500 ]]; then
+    printf 'Timeline title must be 200 characters or fewer and description 500 characters or fewer.\n' >&2
+    exit 1
+fi
+
+temporary_directory=$(mktemp -d "${TMPDIR:-/tmp}/timeline-import.XXXXXX")
+trap 'rm -rf -- "$temporary_directory"' EXIT
+
+records_file="$temporary_directory/events.jsonl"
+python3 - "$csv_path" >"$records_file" <<'PYTHON'
+import csv
+import json
+import sys
+from datetime import date
+
+csv_path = sys.argv[1]
+required_columns = {"start_date", "end_date", "title", "summary", "full_description"}
+
+with open(csv_path, encoding="utf-8-sig", newline="") as source:
+    reader = csv.DictReader(source)
+    columns = set(reader.fieldnames or [])
+    missing_columns = required_columns - columns
+    if missing_columns:
+        raise SystemExit(
+            "CSV is missing required column(s): " + ", ".join(sorted(missing_columns))
+        )
+
+    for row_number, row in enumerate(reader, start=2):
+        event = {
+            "title": (row["title"] or "").strip(),
+            "summary": (row["summary"] or "").strip(),
+            "description": (row["full_description"] or "").strip(),
+            "image_url": (row.get("image_url") or "").strip(),
+        }
+        for field in ("title", "summary", "description"):
+            if not event[field]:
+                raise SystemExit(f"Row {row_number} has an empty {field}.")
+
+        try:
+            event["start_date"] = date.fromisoformat(row["start_date"].strip()[:10]).isoformat()
+            event["end_date"] = date.fromisoformat(row["end_date"].strip()[:10]).isoformat()
+        except ValueError as error:
+            raise SystemExit(f"Row {row_number} has an invalid date: {error}") from error
+
+        if event["end_date"] < event["start_date"]:
+            raise SystemExit(f"Row {row_number} ends before it starts.")
+
+        print(json.dumps(event, ensure_ascii=False))
+PYTHON
+
+mapfile -t event_records <"$records_file"
+
+if [[ ${#event_records[@]} -eq 0 ]]; then
+    printf 'CSV contains no events: %s\n' "$csv_path" >&2
+    exit 1
+fi
+
+declare -a image_paths=()
+declare -a image_mime_types=()
+
+for index in "${!event_records[@]}"; do
+    image_url=$(jq -r '.image_url' <<<"${event_records[$index]}")
+    if [[ -z "$image_url" ]]; then
+        image_paths[$index]=''
+        image_mime_types[$index]=''
+        continue
+    fi
+
+    image_path="$temporary_directory/image-$index"
+    if [[ "$image_url" == http://* || "$image_url" == https://* ]]; then
+        curl --fail --location --retry 3 --silent --show-error --output "$image_path" "$image_url"
+    else
+        source_path=${image_url#file://}
+        if [[ "$source_path" != /* ]]; then
+            source_path="$csv_directory/$source_path"
+        fi
+        if [[ ! -f "$source_path" ]]; then
+            printf 'Image file not found for event %d: %s\n' "$((index + 1))" "$source_path" >&2
+            exit 1
+        fi
+        cp -- "$source_path" "$image_path"
+    fi
+
+    if [[ ! -s "$image_path" || $(wc -c <"$image_path") -gt $MAXIMUM_IMAGE_SIZE ]]; then
+        printf 'Image for event %d is empty or exceeds the 5 MB upload limit.\n' "$((index + 1))" >&2
+        exit 1
+    fi
+
+    mime_type=$(file --brief --mime-type "$image_path")
+    case "$mime_type" in
+        image/jpeg|image/png|image/gif|image/webp) ;;
+        *)
+            printf 'Unsupported image type for event %d: %s\n' "$((index + 1))" "$mime_type" >&2
+            exit 1
+            ;;
+    esac
+
+    image_paths[$index]=$image_path
+    image_mime_types[$index]=$mime_type
+done
+
+printf 'Creating timeline: %s\n' "$timeline_title"
+timeline_response=$(curl --fail-with-body --silent --show-error \
+    --request POST "$api_base_url/timelines" \
+    --form-string "title=$timeline_title" \
+    --form-string "description=$timeline_description")
+timeline_id=$(jq --exit-status --raw-output '.id' <<<"$timeline_response")
+
+for index in "${!event_records[@]}"; do
+    event_record=${event_records[$index]}
+    title=$(jq -r '.title' <<<"$event_record")
+    summary=$(jq -r '.summary' <<<"$event_record")
+    description=$(jq -r '.description' <<<"$event_record")
+    start_date=$(jq -r '.start_date' <<<"$event_record")
+    end_date=$(jq -r '.end_date' <<<"$event_record")
+
+    curl_arguments=(
+        --fail-with-body
+        --silent
+        --show-error
+        --request POST
+        --form-string "title=$title"
+        --form-string "summary=$summary"
+        --form-string "description=$description"
+        --form-string "startDate=$start_date"
+        --form-string "endDate=$end_date"
+    )
+    if [[ -n "${image_paths[$index]}" ]]; then
+        curl_arguments+=(--form "image=@${image_paths[$index]};type=${image_mime_types[$index]}")
+    fi
+
+    printf 'Importing event %d of %d: %s\n' "$((index + 1))" "${#event_records[@]}" "$title"
+    curl "${curl_arguments[@]}" "$api_base_url/timelines/$timeline_id/historical-events" >/dev/null
+done
+
+printf '\nImported %d events into timeline %s.\n' "${#event_records[@]}" "$timeline_id"
+printf 'Open the editor: %s/timelines/%s\n' "${api_base_url%/api}" "$timeline_id"
