@@ -574,7 +574,7 @@ h1 {
 
 .event-selection-toolbar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 1.25rem;
     align-items: center;
     margin-bottom: 1rem;
@@ -634,20 +634,6 @@ h1 {
 
 .event-selection-action-danger {
     color: #dc3545;
-}
-
-.event-selection-clear {
-    display: grid;
-    width: 2.75rem;
-    height: 2.75rem;
-    place-items: center;
-    border: 1px solid #d9e6fb;
-    border-radius: 50%;
-    background: #fff;
-    color: #071b42;
-    font-size: 2rem;
-    font-weight: 300;
-    line-height: 1;
 }
 
 .event-row-selected > * {

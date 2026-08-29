@@ -84,8 +84,11 @@
                                     <span class="event-selection-action-icon" aria-hidden="true">⌫</span>
                                     <span>Delete</span>
                                 </button>
+                                <button class="event-selection-action" type="button" @onclick="ClearSelection">
+                                    <span class="event-selection-action-icon" aria-hidden="true">&times;</span>
+                                    <span>Close</span>
+                                </button>
                             </div>
-                            <button class="event-selection-clear" type="button" @onclick="ClearSelection" aria-label="Clear event selection">&times;</button>
                         </section>
                         @if (selectedEvent.ImageUrl is not null)
                         {
