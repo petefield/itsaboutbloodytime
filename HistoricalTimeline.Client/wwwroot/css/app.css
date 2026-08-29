@@ -656,14 +656,14 @@ h1 {
 }
 
 .timeline-heading h1 {
-    order: 2;
+    order: 1;
     min-width: 0;
     margin: 0;
     font-size: clamp(1.6rem, 3vw, 2.25rem);
 }
 
 .timeline-subheading {
-    order: 1;
+    order: 2;
     max-width: 36rem;
     margin: 0;
     color: #566b93;
