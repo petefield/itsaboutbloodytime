@@ -31,63 +31,80 @@
     }
     else
     {
-        @if (SelectedEvent is { } selectedEvent)
-        {
-            <section class="event-selection-toolbar" aria-label="Selected event actions">
-                <div class="event-selection-summary">
-                    <strong>1 event selected</strong>
-                    <span>@selectedEvent.Title</span>
-                </div>
-                <div class="event-selection-actions">
-                    <button class="event-selection-action" type="button" @onclick="EditSelectedEvent">
-                        <span class="event-selection-action-icon" aria-hidden="true">✎</span>
-                        <span>Edit</span>
-                    </button>
-                    <button class="event-selection-action event-selection-action-danger" type="button" @onclick="DeleteSelectedEvent">
-                        <span class="event-selection-action-icon" aria-hidden="true">⌫</span>
-                        <span>Delete</span>
-                    </button>
-                </div>
-                <button class="event-selection-clear" type="button" @onclick="ClearSelection" aria-label="Clear event selection">&times;</button>
-            </section>
-        }
-        <div class="event-table-surface table-responsive">
-            <table class="table table-hover align-middle event-table">
-                <thead>
-                    <tr>
-                        <th scope="col"><span class="visually-hidden">Select</span></th>
-                        <th scope="col">Start date</th>
-                        <th scope="col">End date</th>
-                        <th scope="col">Title</th>
-                        <th scope="col">Summary</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var historicalEvent in events)
-                    {
-                        <tr class="@(selectedEventId == historicalEvent.Id ? "event-row-selected" : null)">
-                            <td class="event-selection-cell">
-                                <input class="form-check-input" type="checkbox"
-                                       checked="@(selectedEventId == historicalEvent.Id)"
-                                       @onchange="() => ToggleSelection(historicalEvent.Id)"
-                                       aria-label="@($"Select {historicalEvent.Title}")" />
-                            </td>
-                            <td class="event-date">@historicalEvent.StartDate.ToString("d MMM yyyy")</td>
-                            <td class="event-date">@historicalEvent.EndDate.ToString("d MMM yyyy")</td>
-                            <td>
-                                <div class="event-title">
-                                    @if (historicalEvent.ImageUrl is not null)
-                                    {
-                                        <img src="@ApiUrl(historicalEvent.ImageUrl)" alt="" class="event-thumbnail" />
-                                    }
-                                    <span>@historicalEvent.Title</span>
-                                </div>
-                            </td>
-                            <td>@historicalEvent.Summary</td>
+        <div class="event-editor-columns">
+            <div class="event-table-surface table-responsive">
+                <table class="table table-hover align-middle event-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Start date</th>
+                            <th scope="col">End date</th>
+                            <th scope="col">Title</th>
+                            <th scope="col">Summary</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var historicalEvent in events)
+                        {
+                            <tr class="event-selectable-row @(selectedEventId == historicalEvent.Id ? "event-row-selected" : null)"
+                                tabindex="0"
+                                @onclick="() => SelectEvent(historicalEvent.Id)"
+                                @onkeydown="(args) => SelectEventOnKeyDown(args, historicalEvent.Id)">
+                                <td class="event-date">@historicalEvent.StartDate.ToString("d MMM yyyy")</td>
+                                <td class="event-date">@historicalEvent.EndDate.ToString("d MMM yyyy")</td>
+                                <td>
+                                    <div class="event-title">
+                                        @if (historicalEvent.ImageUrl is not null)
+                                        {
+                                            <img src="@ApiUrl(historicalEvent.ImageUrl)" alt="" class="event-thumbnail" />
+                                        }
+                                        <span>@historicalEvent.Title</span>
+                                    </div>
+                                </td>
+                                <td>@historicalEvent.Summary</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <aside class="event-preview" aria-live="polite">
+                @if (SelectedEvent is { } selectedEvent)
+                {
+                    <section class="event-selection-toolbar" aria-label="Selected event actions">
+                        <div class="event-selection-summary">
+                            <strong>1 event selected</strong>
+                            <span>@selectedEvent.Title</span>
+                        </div>
+                        <div class="event-selection-actions">
+                            <button class="event-selection-action" type="button" @onclick="EditSelectedEvent">
+                                <span class="event-selection-action-icon" aria-hidden="true">✎</span>
+                                <span>Edit</span>
+                            </button>
+                            <button class="event-selection-action event-selection-action-danger" type="button" @onclick="DeleteSelectedEvent">
+                                <span class="event-selection-action-icon" aria-hidden="true">⌫</span>
+                                <span>Delete</span>
+                            </button>
+                        </div>
+                        <button class="event-selection-clear" type="button" @onclick="ClearSelection" aria-label="Clear event selection">&times;</button>
+                    </section>
+                    <article class="event-preview-content">
+                        @if (selectedEvent.ImageUrl is not null)
+                        {
+                            <img src="@ApiUrl(selectedEvent.ImageUrl)" alt="" class="event-preview-image" />
+                        }
+                        <p class="event-preview-date">@DisplayDateRange(selectedEvent)</p>
+                        <h2>@selectedEvent.Title</h2>
+                        <p class="event-preview-summary">@selectedEvent.Summary</p>
+                        <p class="event-preview-description">@selectedEvent.Description</p>
+                    </article>
+                }
+                else
+                {
+                    <div class="event-preview-empty">
+                        <span aria-hidden="true">←</span>
+                        <p>Select an event to preview its details and available actions.</p>
+                    </div>
+                }
+            </aside>
         </div>
     }
 </section>
@@ -391,10 +408,17 @@
         showEditor = true;
     }
 
-    private void ToggleSelection(Guid eventId) =>
-        selectedEventId = selectedEventId == eventId ? null : eventId;
+    private void SelectEvent(Guid eventId) => selectedEventId = eventId;
 
     private void ClearSelection() => selectedEventId = null;
+
+    private void SelectEventOnKeyDown(KeyboardEventArgs args, Guid eventId)
+    {
+        if (args.Key is "Enter" or " ")
+        {
+            SelectEvent(eventId);
+        }
+    }
 
     private void EditSelectedEvent()
     {
@@ -537,6 +561,11 @@
             deleting = false;
         }
     }
+
+    private static string DisplayDateRange(HistoricalEvent historicalEvent) =>
+        historicalEvent.StartDate == historicalEvent.EndDate
+            ? historicalEvent.StartDate.ToString("d MMMM yyyy")
+            : $"{historicalEvent.StartDate:d MMMM yyyy} - {historicalEvent.EndDate:d MMMM yyyy}";
 
     private string ApiUrl(string relativeUrl) => new Uri(Http.BaseAddress!, relativeUrl).ToString();
 }
