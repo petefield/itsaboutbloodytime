@@ -581,7 +581,7 @@ h1 {
     grid-template-columns: auto;
     gap: 1.25rem;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-end;
     margin-bottom: 1rem;
     padding: 1rem 1.25rem;
     border: 1px solid #cfe0fb;
@@ -936,7 +936,7 @@ h1 {
 
     .event-selection-actions {
         grid-column: 1 / -1;
-        justify-content: flex-start;
+        justify-content: flex-end;
     }
 
     .event-editor-columns-selected {
