@@ -652,7 +652,7 @@ h1 {
     display: flex;
     flex: 1 1 auto;
     gap: 1rem;
-    align-items: baseline;
+    align-items: flex-start;
     min-width: 0;
 }
 
