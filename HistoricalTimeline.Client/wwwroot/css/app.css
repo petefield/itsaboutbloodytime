@@ -133,20 +133,21 @@ a, .btn-link {
 }
 
 .app-navigation a {
-    padding: 0.85rem 1.15rem;
-    border: 1px solid rgb(153 190 246 / 30%);
-    border-radius: 0.85rem;
+    padding: 0.35rem 0.25rem;
     color: #f6f9ff;
     font-size: 1rem;
     font-weight: 600;
-    text-decoration: none;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.35rem;
+    transition: color 0.15s ease, text-decoration-color 0.15s ease;
 }
 
 .app-navigation a:hover,
 .app-navigation a.active {
-    border-color: rgb(153 190 246 / 58%);
-    background: rgb(255 255 255 / 8%);
     color: #fff;
+    text-decoration-color: #3d8cff;
 }
 
 .event-page {
@@ -1141,7 +1142,7 @@ h1 {
     }
 
     .app-navigation a {
-        padding: 0.65rem 0.6rem;
+        padding: 0.35rem 0.25rem;
         font-size: 0.8rem;
     }
 
