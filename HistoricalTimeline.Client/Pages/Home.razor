@@ -1,5 +1,6 @@
 @page "/"
 @inject HttpClient Http
+@inject NavigationManager Navigation
 
 <PageTitle>Timeline topics</PageTitle>
 
@@ -20,7 +21,7 @@
 
     <section class="timeline-list-action-sheet" aria-label="Timeline actions">
         <div class="timeline-search">
-            <label class="visually-hidden" for="timeline-search">Search timelines</label>
+            <label class="visually-hidden" for="timeline-search">Search</label>
             <span class="timeline-search-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
                     <path d="m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" />
@@ -41,7 +42,7 @@
         </div>
         <button class="event-selection-action" type="button" @onclick="OpenCreate">
             <span class="event-selection-action-icon" aria-hidden="true">+</span>
-            <span>Create timeline</span>
+            <span>Create Timeline</span>
         </button>
     </section>
 
@@ -231,8 +232,14 @@
                 return;
             }
 
-            CloseEditor();
-            await LoadTimelinesAsync();
+            var timeline = await response.Content.ReadFromJsonAsync<TimelineTopic>();
+            if (timeline is null)
+            {
+                saveError = "The timeline was saved, but it could not be opened. Return to the homepage and try again.";
+                return;
+            }
+
+            Navigation.NavigateTo($"timelines/{timeline.Id:N}");
         }
         catch (HttpRequestException)
         {
