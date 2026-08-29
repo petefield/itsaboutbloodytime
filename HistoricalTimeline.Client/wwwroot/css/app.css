@@ -648,6 +648,7 @@ h1 {
     position: sticky;
     top: 1rem;
     min-width: 0;
+    animation: event-preview-slide-in 0.24s ease-out;
 }
 
 .event-preview-content,
@@ -709,6 +710,18 @@ h1 {
     color: #566b93;
     line-height: 1.6;
     white-space: pre-line;
+}
+
+@keyframes event-preview-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(1.5rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .timeline-scroll {
@@ -955,6 +968,12 @@ h1 {
 @media (max-width: 576px) {
     .content {
         padding: 2.5rem 1rem 3rem;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .event-preview {
+            animation: none;
+        }
     }
 
     .app-header-content {
