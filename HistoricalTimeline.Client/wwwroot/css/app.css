@@ -1141,7 +1141,7 @@ h1 {
     height: 7rem;
     margin-bottom: 0.75rem;
     border-radius: 0.25rem;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 .event-detail-image {
