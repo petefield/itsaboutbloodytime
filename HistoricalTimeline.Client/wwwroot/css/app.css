@@ -156,6 +156,30 @@ a, .btn-link {
     margin-bottom: 2.5rem;
 }
 
+.information-page {
+    max-width: 760px;
+}
+
+.information-panel {
+    padding: 2rem;
+    border: 1px solid #cfe0fb;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 0.6rem 1.4rem rgb(20 59 113 / 8%);
+}
+
+.information-panel h2 {
+    margin: 0 0 0.75rem;
+    color: #073b8f;
+    font-size: 1.3rem;
+}
+
+.information-panel p {
+    margin: 0;
+    color: #566b93;
+    line-height: 1.7;
+}
+
 .archive-hero {
     position: relative;
     display: flex;
