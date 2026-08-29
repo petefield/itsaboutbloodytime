@@ -93,6 +93,7 @@
     private const int LaneHeight = 240;
     private const int AxisClearance = 32;
     private const int MinimumTimelineWidth = 1_600;
+    private const int MinimumEventSpacing = 320;
     private static readonly string[] EventColours =
     [
         "#0d6efd", "#198754", "#dc3545", "#6f42c1", "#fd7e14",
@@ -156,7 +157,10 @@
         var timelineStart = orderedEvents[0].StartDate;
         var timelineEnd = orderedEvents.Max(historicalEvent => historicalEvent.EndDate);
         var durationInDays = Math.Max(1, timelineEnd.DayNumber - timelineStart.DayNumber);
-        var pixelsPerDay = (double)MinimumTimelineWidth / durationInDays;
+        var minimumTimelineWidth = Math.Max(
+            MinimumTimelineWidth,
+            orderedEvents.Length * MinimumEventSpacing);
+        var pixelsPerDay = (double)minimumTimelineWidth / durationInDays;
         var aboveLaneEnds = new List<double>();
         var belowLaneEnds = new List<double>();
 
@@ -188,7 +192,7 @@
         }
 
         timelineWidth = Math.Max(
-            MinimumTimelineWidth,
+            minimumTimelineWidth,
             (int)Math.Ceiling(durationInDays * pixelsPerDay) + EventCardWidth);
         timelineHeight = (aboveLaneEnds.Count + belowLaneEnds.Count) * LaneHeight + (AxisClearance * 2);
     }
