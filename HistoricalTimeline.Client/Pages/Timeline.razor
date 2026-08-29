@@ -7,8 +7,12 @@
 
 <section class="timeline-page">
     <div class="event-toolbar">
-        <div>
+        <div class="timeline-heading">
             <h1>@(timeline?.Title ?? "Event timeline")</h1>
+            @if (!string.IsNullOrWhiteSpace(timeline?.Description))
+            {
+                <p class="timeline-subheading">@timeline.Description</p>
+            }
         </div>
         <div class="d-flex gap-2">
             <a class="btn btn-outline-primary" href="@($"timelines/{TimelineId:N}")">Event list</a>

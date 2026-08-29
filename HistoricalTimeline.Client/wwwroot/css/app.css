@@ -536,6 +536,17 @@ h1 {
     padding: 1.5rem;
 }
 
+.timeline-heading h1 {
+    font-size: clamp(1.6rem, 3vw, 2.25rem);
+}
+
+.timeline-subheading {
+    max-width: 48rem;
+    margin: 0.35rem 0 0;
+    color: #566b93;
+    font-size: 1rem;
+}
+
 .event-table .event-date,
 .event-table .event-actions {
     white-space: nowrap;
