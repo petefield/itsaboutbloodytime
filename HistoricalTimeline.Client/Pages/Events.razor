@@ -6,23 +6,29 @@
 
 <section class="event-page">
     <div class="event-toolbar">
-        <div>
-            <p class="eyebrow">Timeline editor</p>
-            <h1>@(timeline?.Title ?? "Timeline events")</h1>
-            <p class="page-introduction">@(string.IsNullOrWhiteSpace(timeline?.Description) ? "Add a description to introduce this timeline." : timeline.Description)</p>
+        <div class="timeline-editor-heading">
+            @if (timeline?.ImageUrl is not null)
+            {
+                <img src="@ApiUrl(timeline.ImageUrl)" alt="" class="timeline-editor-thumbnail" />
+            }
+            <div>
+                <p class="eyebrow">Timeline Editor</p>
+                <h1>@(timeline?.Title ?? "Timeline events")</h1>
+                <p class="page-introduction">@(string.IsNullOrWhiteSpace(timeline?.Description) ? "Add a description to introduce this timeline." : timeline.Description)</p>
+            </div>
         </div>
         <div class="toolbar-actions">
             <a class="event-selection-action" href="@($"timelines/{TimelineId:N}/timeline")">
                 <span class="event-selection-action-icon" aria-hidden="true">◷</span>
-                <span>View timeline</span>
+                <span>Render Timeline</span>
             </a>
             <button class="event-selection-action" type="button" @onclick="OpenTimelineEditor" disabled="@(timeline is null)">
                 <span class="event-selection-action-icon" aria-hidden="true">✎</span>
-                <span>Edit timeline</span>
+                <span>Edit Details</span>
             </button>
             <button class="event-selection-action event-selection-action-danger" type="button" @onclick="OpenTimelineDeleteConfirmation" disabled="@(timeline is null)">
                 <span class="event-selection-action-icon" aria-hidden="true">⌫</span>
-                <span>Delete timeline</span>
+                <span>Delete Timeline</span>
             </button>
         </div>
     </div>

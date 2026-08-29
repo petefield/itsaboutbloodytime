@@ -596,6 +596,21 @@ h1 {
     margin-bottom: .75rem;
 }
 
+.timeline-editor-heading {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    min-width: 0;
+}
+
+.timeline-editor-thumbnail {
+    flex: 0 0 auto;
+    width: 5rem;
+    height: 5rem;
+    border-radius: 0.85rem;
+    object-fit: cover;
+}
+
 .toolbar-actions {
     display: flex;
     flex-wrap: wrap;
