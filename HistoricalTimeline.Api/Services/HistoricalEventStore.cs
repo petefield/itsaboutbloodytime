@@ -3,6 +3,7 @@ using Azure.Data.Tables;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using HistoricalTimeline.Api.Models;
+using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 
@@ -11,6 +12,7 @@ namespace HistoricalTimeline.Api.Services;
 public sealed class HistoricalEventStore
 {
     private const string TimelinePartitionKey = "timelines";
+    private static readonly DateOnly EarliestTableStorageDate = new(1601, 1, 1);
     private readonly TableClient eventTable;
     private readonly TableClient timelineTable;
     private readonly BlobContainerClient imageContainer;
@@ -338,8 +340,12 @@ public sealed class HistoricalEventStore
             ImageBlobName = historicalEvent.ImageUrl is null
                 ? null
                 : Path.GetFileName(historicalEvent.ImageUrl),
-            StartDate = historicalEvent.StartDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
-            EndDate = historicalEvent.EndDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)
+            // Azure Table Storage date-time values begin in 1601, but historical
+            // timelines must support earlier events.
+            StartDate = ToTableStorageDate(historicalEvent.StartDate),
+            EndDate = ToTableStorageDate(historicalEvent.EndDate),
+            StartDateText = historicalEvent.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            EndDateText = historicalEvent.EndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
         };
 
     private static HistoricalEvent ToModel(Guid timelineId, HistoricalEventEntity entity) =>
@@ -352,9 +358,31 @@ public sealed class HistoricalEventStore
             ImageUrl = entity.ImageBlobName is null
                 ? null
                 : $"/api/timelines/{timelineId:N}/historical-events/images/{entity.ImageBlobName}",
-            StartDate = DateOnly.FromDateTime(entity.StartDate),
-            EndDate = DateOnly.FromDateTime(entity.EndDate)
+            StartDate = ToDateOnly(entity.StartDateText, entity.StartDate),
+            EndDate = ToDateOnly(entity.EndDateText, entity.EndDate)
         };
+
+    private static DateTime? ToTableStorageDate(DateOnly date) =>
+        date < EarliestTableStorageDate
+            ? null
+            : date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+    private static DateOnly ToDateOnly(string? textDate, DateTime? legacyDate)
+    {
+        if (DateOnly.TryParseExact(
+                textDate,
+                "yyyy-MM-dd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out var date))
+        {
+            return date;
+        }
+
+        return legacyDate is not null
+            ? DateOnly.FromDateTime(legacyDate.Value)
+            : throw new InvalidOperationException("The stored event is missing a date.");
+    }
 
     private static TimelineTopic ToModel(TimelineTopicEntity entity) =>
         new()

@@ -8,6 +8,16 @@ progress() {
     printf '\n==> %s\n' "$1"
 }
 
+read_error_response() {
+    local response_file=$1
+
+    if [[ ! -s "$response_file" ]]; then
+        printf 'No response body was returned.'
+    elif ! jq --compact-output . "$response_file" 2>/dev/null; then
+        tr '\n' ' ' <"$response_file"
+    fi
+}
+
 usage() {
     cat <<'EOF'
 Usage: import-timeline.sh CSV_PATH [TIMELINE_TITLE] [TIMELINE_DESCRIPTION]
@@ -286,7 +296,7 @@ for index in "${!event_records[@]}"; do
         elif [[ "$response_status" == "400" ]]; then
             printf '    Image was rejected by the API; retrying event without it.\n' >&2
         else
-            error_response=$(jq --compact-output . "$response_file" 2>/dev/null || cat "$response_file")
+            error_response=$(read_error_response "$response_file")
             printf 'Unable to upload event %d (HTTP %s): %s\n' "$((index + 1))" "$response_status" "$error_response" >&2
             exit 1
         fi
@@ -294,7 +304,7 @@ for index in "${!event_records[@]}"; do
 
     if [[ "$event_uploaded" != true ]]; then
         if ! response_status=$(curl "${curl_arguments[@]}" "$event_url" --output "$response_file" --write-out '%{http_code}'); then
-            error_response=$(jq --compact-output . "$response_file" 2>/dev/null || cat "$response_file")
+            error_response=$(read_error_response "$response_file")
             printf 'Unable to upload event %d (HTTP %s): %s\n' "$((index + 1))" "$response_status" "$error_response" >&2
             exit 1
         fi

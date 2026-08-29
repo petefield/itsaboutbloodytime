@@ -13,6 +13,8 @@ public sealed class HistoricalEventEntity : ITableEntity
     public string Summary { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string? ImageBlobName { get; set; }
-    public DateTime StartDate { get; set; }
-    public DateTime EndDate { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public string? StartDateText { get; set; }
+    public string? EndDateText { get; set; }
 }
