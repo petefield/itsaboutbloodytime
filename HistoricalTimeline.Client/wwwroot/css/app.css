@@ -167,36 +167,44 @@ a, .btn-link {
     max-width: 960px;
 }
 
-.information-panel {
-    padding: 2rem;
-    border: 1px solid #cfe0fb;
-    border-radius: 1rem;
-    background: #fff;
-    box-shadow: 0 0.6rem 1.4rem rgb(20 59 113 / 8%);
+.information-content {
+    display: grid;
+    gap: 2.75rem;
 }
 
-.information-panel h2 {
-    margin: 0 0 0.75rem;
+.information-section {
+    position: relative;
+    padding-left: 1.25rem;
+}
+
+.information-section::before {
+    position: absolute;
+    top: 0.35rem;
+    bottom: 0.35rem;
+    left: 0;
+    width: 3px;
+    border-radius: 999px;
+    background: #b9d6ff;
+    content: "";
+}
+
+.information-section h2 {
+    margin: 0 0 0.8rem;
     color: #073b8f;
-    font-size: 1.3rem;
+    font-size: 1.4rem;
 }
 
-.information-panel p {
+.information-section p {
     margin: 0;
     color: #566b93;
     line-height: 1.7;
 }
 
-.about-guide {
-    display: grid;
-    gap: 1rem;
-}
-
-.about-panel p + p {
+.information-section p + p {
     margin-top: 1rem;
 }
 
-.about-panel ul {
+.about-section ul {
     display: grid;
     gap: 0.5rem;
     margin: 1rem 0 0;
@@ -205,25 +213,7 @@ a, .btn-link {
     line-height: 1.6;
 }
 
-.support-guide {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1rem;
-}
-
-.support-card {
-    padding: 1.75rem;
-    border: 1px solid #cfe0fb;
-    border-radius: 1rem;
-    background: #fff;
-    box-shadow: 0 0.6rem 1.4rem rgb(20 59 113 / 8%);
-}
-
-.support-card-wide {
-    grid-column: 1 / -1;
-}
-
-.support-card-label {
+.support-section-label {
     margin: 0 0 0.4rem;
     color: #176ee9;
     font-size: 0.75rem;
@@ -232,7 +222,7 @@ a, .btn-link {
     text-transform: uppercase;
 }
 
-.support-card h2 {
+.support-section h2 {
     margin: 0 0 1.25rem;
     color: #073b8f;
     font-size: 1.35rem;
@@ -284,9 +274,8 @@ a, .btn-link {
 
 .support-tips p {
     margin: 0;
-    padding: 1rem;
-    border-radius: 0.75rem;
-    background: #f3f7ff;
+    padding-left: 1rem;
+    border-left: 2px solid #d7e6fb;
     color: #566b93;
     line-height: 1.65;
 }
@@ -1304,15 +1293,6 @@ h1 {
     .content {
         --content-horizontal-padding: 2rem;
         padding: 2.5rem 1rem 3rem;
-    }
-
-    .support-guide,
-    .support-tips {
-        grid-template-columns: 1fr;
-    }
-
-    .support-card {
-        padding: 1.25rem;
     }
 
     .archive-hero.home-hero {
