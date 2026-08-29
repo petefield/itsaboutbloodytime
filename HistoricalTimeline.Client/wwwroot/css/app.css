@@ -607,7 +607,9 @@ h1 {
 }
 
 .timeline-editor-summary .page-introduction {
+    flex: 1;
     margin: 0;
+    text-align: justify;
 }
 
 .timeline-editor-thumbnail {
