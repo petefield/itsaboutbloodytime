@@ -80,7 +80,7 @@
                                     <span class="event-selection-action-icon" aria-hidden="true">✎</span>
                                     <span>Edit</span>
                                 </button>
-                                <button class="event-selection-action event-selection-action-danger" type="button" @onclick="DeleteSelectedEvent">
+                                <button class="event-selection-action event-selection-action-danger" type="button" @onclick="OpenDeleteConfirmation">
                                     <span class="event-selection-action-icon" aria-hidden="true">⌫</span>
                                     <span>Delete</span>
                                 </button>
@@ -171,25 +171,38 @@
                                 <div class="form-text">Selected image: @selectedImage.Name</div>
                             }
                         </div>
-                        @if (confirmingDelete)
-                        {
-                            <div class="alert alert-danger">
-                                <p class="mb-2">Delete this event permanently? Its image will also be removed.</p>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-danger" type="button" @onclick="DeleteAsync" disabled="@deleting">@(deleting ? "Deleting..." : "Delete event")</button>
-                                    <button class="btn btn-outline-secondary" type="button" @onclick="CancelDelete" disabled="@deleting">Keep event</button>
-                                </div>
-                            </div>
-                        }
                         <div class="d-flex gap-2">
                             <button class="btn btn-primary" type="submit" disabled="@saving">@(saving ? "Saving..." : "Save event")</button>
                             <button class="btn btn-outline-secondary" type="button" @onclick="ResetForm">Cancel</button>
-                            @if (editingId is not null && !confirmingDelete)
-                            {
-                                <button class="btn btn-outline-danger ms-auto" type="button" @onclick="ConfirmDelete">Delete event</button>
-                            }
                         </div>
                     </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (eventPendingDeletion is not null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="delete-event-title">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="delete-event-title">Delete event</h2>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CancelDelete" disabled="@deleting"></button>
+                </div>
+                <div class="modal-body">
+                    @if (deleteError is not null)
+                    {
+                        <div class="alert alert-danger">@deleteError</div>
+                    }
+                    <p>Are you sure you want to delete <strong>@eventPendingDeletion.Title</strong>?</p>
+                    <p class="mb-0 text-muted">This permanently removes the event and its image.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" @onclick="CancelDelete" disabled="@deleting">Cancel</button>
+                    <button class="btn btn-danger" type="button" @onclick="DeleteAsync" disabled="@deleting">@(deleting ? "Deleting..." : "Delete event")</button>
                 </div>
             </div>
         </div>
@@ -269,15 +282,16 @@
     private Guid? editingId;
     private string? editingImageUrl;
     private string? timelineImageUrl;
+    private HistoricalEvent? eventPendingDeletion;
     private bool showEditor;
     private bool showTimelineEditor;
     private bool saving;
     private bool deleting;
-    private bool confirmingDelete;
     private bool timelineSaving;
     private string? loadError;
     private string? saveError;
     private string? imageError;
+    private string? deleteError;
     private string? timelineSaveError;
     private string? timelineImageError;
     private HistoricalEvent? SelectedEvent =>
@@ -404,7 +418,6 @@
         editingImageUrl = historicalEvent.ImageUrl;
         imageError = null;
         saveError = null;
-        confirmingDelete = false;
         showEditor = true;
     }
 
@@ -428,12 +441,12 @@
         }
     }
 
-    private void DeleteSelectedEvent()
+    private void OpenDeleteConfirmation()
     {
         if (SelectedEvent is { } selectedEvent)
         {
-            Edit(selectedEvent);
-            ConfirmDelete();
+            eventPendingDeletion = selectedEvent;
+            deleteError = null;
         }
     }
 
@@ -521,40 +534,42 @@
         imageError = null;
         saveError = null;
         deleting = false;
-        confirmingDelete = false;
         showEditor = false;
     }
 
-    private void ConfirmDelete() => confirmingDelete = true;
-
-    private void CancelDelete() => confirmingDelete = false;
+    private void CancelDelete()
+    {
+        eventPendingDeletion = null;
+        deleteError = null;
+    }
 
     private async Task DeleteAsync()
     {
-        if (editingId is null)
+        if (eventPendingDeletion is null)
         {
             return;
         }
 
+        var eventId = eventPendingDeletion.Id;
         deleting = true;
-        saveError = null;
+        deleteError = null;
         try
         {
             using var response = await Http.DeleteAsync(
-                $"api/timelines/{TimelineId:N}/historical-events/{editingId:N}");
+                $"api/timelines/{TimelineId:N}/historical-events/{eventId:N}");
             if (!response.IsSuccessStatusCode)
             {
-                saveError = "The event could not be deleted. Try again.";
+                deleteError = "The event could not be deleted. Try again.";
                 return;
             }
 
             selectedEventId = null;
-            ResetForm();
+            eventPendingDeletion = null;
             await LoadEventsAsync();
         }
         catch (HttpRequestException)
         {
-            saveError = "The events service is unavailable. Start the API and try again.";
+            deleteError = "The events service is unavailable. Start the API and try again.";
         }
         finally
         {
