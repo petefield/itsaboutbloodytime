@@ -549,7 +549,7 @@ h1 {
     display: flex;
     flex: 1;
     overflow-x: auto;
-    padding: 1rem 0;
+    padding: 0;
     scrollbar-width: none;
 }
 
@@ -616,7 +616,7 @@ h1 {
 
 .timeline-axis {
     position: absolute;
-    top: 50%;
+    top: 1rem;
     right: 0;
     left: 0;
     border-top: 6px solid #0d6efd;
@@ -625,7 +625,7 @@ h1 {
 .timeline-range {
     position: absolute;
     z-index: 1;
-    top: calc(50% - 0.25rem);
+    top: calc(1rem - 0.25rem);
     height: 0.5rem;
     min-width: 0.5rem;
     border-radius: 999px;

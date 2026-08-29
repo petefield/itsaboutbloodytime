@@ -98,7 +98,8 @@
 @code {
     private const int EventCardWidth = 240;
     private const int EventCardHeight = 320;
-    private const int LaneHeight = 240;
+    private const int LaneHeight = 320;
+    private const int AxisTop = 16;
     private const int AxisClearance = 32;
     private const int MinimumTimelineWidth = 1_600;
     private const int MinimumEventSpacing = 320;
@@ -217,15 +218,12 @@
             MinimumTimelineWidth,
             orderedEvents.Length * MinimumEventSpacing);
         var pixelsPerDay = (double)minimumTimelineWidth / durationInDays;
-        var aboveLaneEnds = new List<double>();
-        var belowLaneEnds = new List<double>();
+        var laneEnds = new List<double>();
 
         foreach (var (historicalEvent, index) in orderedEvents.Select((historicalEvent, index) => (historicalEvent, index)))
         {
-            var above = index % 2 == 0;
             var left = (historicalEvent.StartDate.DayNumber - timelineStart.DayNumber) * pixelsPerDay;
             var rangeWidth = Math.Max(4, (historicalEvent.EndDate.DayNumber - historicalEvent.StartDate.DayNumber) * pixelsPerDay);
-            var laneEnds = above ? aboveLaneEnds : belowLaneEnds;
             var lane = laneEnds.FindIndex(end => end <= left);
 
             if (lane < 0)
@@ -240,7 +238,6 @@
 
             timelinePlacements.Add(new TimelinePlacement(
                 historicalEvent,
-                above,
                 lane,
                 left,
                 rangeWidth,
@@ -250,31 +247,22 @@
         timelineWidth = Math.Max(
             minimumTimelineWidth,
             (int)Math.Ceiling(durationInDays * pixelsPerDay) + EventCardWidth);
-        var maximumLaneCount = Math.Max(aboveLaneEnds.Count, belowLaneEnds.Count);
-        timelineHeight = 2 * (
-            AxisClearance
-            + ((maximumLaneCount - 1) * LaneHeight)
-            + EventCardHeight);
+        timelineHeight = AxisTop
+            + AxisClearance
+            + ((laneEnds.Count - 1) * LaneHeight)
+            + EventCardHeight;
     }
 
     private string PositionEvent(TimelinePlacement placement)
     {
         var distanceFromAxis = AxisClearance + (placement.Lane * LaneHeight);
-        var verticalPosition = placement.Above
-            ? $"bottom: {timelineHeight / 2 + distanceFromAxis}px;"
-            : $"top: {timelineHeight / 2 + distanceFromAxis}px;";
-
-        return $"left: {placement.Left:F1}px; --event-colour: {placement.Colour}; {verticalPosition}";
+        return $"left: {placement.Left:F1}px; top: {AxisTop + distanceFromAxis}px; --event-colour: {placement.Colour};";
     }
 
     private string PositionConnector(TimelinePlacement placement)
     {
         var distanceFromAxis = AxisClearance + (placement.Lane * LaneHeight);
-        var verticalPosition = placement.Above
-            ? $"top: {timelineHeight / 2 - distanceFromAxis}px;"
-            : $"top: {timelineHeight / 2}px;";
-
-        return $"left: {placement.Left:F1}px; height: {distanceFromAxis}px; --event-colour: {placement.Colour}; {verticalPosition}";
+        return $"left: {placement.Left:F1}px; top: {AxisTop}px; height: {distanceFromAxis}px; --event-colour: {placement.Colour};";
     }
 
     private static string DisplayDateRange(HistoricalEvent historicalEvent) =>
@@ -286,7 +274,6 @@
 
     private sealed record TimelinePlacement(
         HistoricalEvent Event,
-        bool Above,
         int Lane,
         double Left,
         double RangeWidth,
