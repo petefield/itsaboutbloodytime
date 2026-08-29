@@ -270,6 +270,23 @@ h1 {
     flex: 1;
     overflow-x: auto;
     padding: 1rem 0;
+    scrollbar-width: none;
+}
+
+.timeline-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.timeline-top-scroll {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    flex: 0 0 auto;
+    height: 1.25rem;
+    margin-bottom: 0.5rem;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    background: #f5f7fb;
 }
 
 .timeline-track {
