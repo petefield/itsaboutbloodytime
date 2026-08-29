@@ -28,6 +28,8 @@ Creates a timeline and imports every CSV row as an event. The CSV must contain:
 
 The optional image_url column may contain an HTTP(S) URL, a file:// URL, or a
 path relative to the CSV file. Each image is uploaded with its event.
+Downloaded HTTP(S) images are retained beside the CSV using the CSV filename
+and event number.
 Images larger than 5 MB are resized and compressed to fit the upload limit.
 Unavailable or unsupported images are skipped while their event is imported.
 
@@ -151,8 +153,8 @@ for index in "${!event_records[@]}"; do
         continue
     fi
 
-    image_path="$temporary_directory/image-$index"
     if [[ "$image_url" == http://* || "$image_url" == https://* ]]; then
+        image_path="$csv_directory/${filename_stem}-image-$((index + 1))"
         printf '    Downloading image...\n'
         if ! curl --fail --location --connect-timeout 10 --max-time 30 --silent --show-error \
             --user-agent "$image_download_user_agent" \
@@ -163,6 +165,7 @@ for index in "${!event_records[@]}"; do
             continue
         fi
     else
+        image_path="$temporary_directory/image-$index"
         printf '    Reading local image...\n'
         source_path=${image_url#file://}
         if [[ "$source_path" != /* ]]; then
@@ -258,6 +261,12 @@ for index in "${!event_records[@]}"; do
     image_paths[$index]=$image_path
     image_mime_types[$index]=$mime_type
     image_extensions[$index]=$image_extension
+    if [[ "$image_url" == http://* || "$image_url" == https://* ]]; then
+        downloaded_image_path="${image_path}.${image_extension}"
+        mv --force "$image_path" "$downloaded_image_path"
+        image_paths[$index]=$downloaded_image_path
+        printf '    Saved image: %s\n' "$(basename "$downloaded_image_path")"
+    fi
     printf '    Image ready.\n'
 done
 
