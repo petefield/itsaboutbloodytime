@@ -1409,13 +1409,8 @@ h1 {
         font-size: 1.25rem;
     }
 
-    .timeline-list-action-sheet {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .timeline-list-action-sheet .event-selection-action {
-        align-self: flex-end;
+    .timeline-search {
+        flex-basis: 0;
     }
 }
 
