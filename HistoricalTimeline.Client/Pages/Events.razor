@@ -164,6 +164,24 @@
                             <InputTextArea id="description" class="form-control" rows="6" @bind-Value="form.Description" />
                             <ValidationMessage For="() => form.Description" />
                         </div>
+                        <div class="date-entry-section">
+                            <div class="date-entry-heading">
+                                <span class="form-label mb-0">Date range</span>
+                                <button class="date-help-button"
+                                        type="button"
+                                        aria-label="Explain date formats"
+                                        aria-expanded="@showDateHelp"
+                                        aria-controls="date-entry-help"
+                                        @onclick="ToggleDateHelp">i</button>
+                            </div>
+                            @if (showDateHelp)
+                            {
+                                <p class="date-entry-help" id="date-entry-help">
+                                    Enter CE dates as <strong>YYYY-MM-DD</strong>, for example <strong>1942-11-11</strong>.
+                                    For BCE dates, add a minus sign before the year, for example <strong>-1599-01-01</strong> for 1 January 1600 BCE.
+                                </p>
+                            }
+                        </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label" for="start-date">Start date</label>
@@ -335,6 +353,7 @@
     private HistoricalEvent? eventPendingDeletion;
     private TimelineTopic? timelinePendingDeletion;
     private bool showEditor;
+    private bool showDateHelp;
     private bool showTimelineEditor;
     private bool saving;
     private bool deleting;
@@ -398,6 +417,8 @@
         selectedImage = args.File;
         imageError = selectedImage.Size > MaximumImageSize ? "Images must be 5 MB or smaller." : null;
     }
+
+    private void ToggleDateHelp() => showDateHelp = !showDateHelp;
 
     private void SelectTimelineImage(InputFileChangeEventArgs args)
     {
@@ -633,6 +654,7 @@
         saveError = null;
         deleting = false;
         showEditor = false;
+        showDateHelp = false;
     }
 
     private void CancelDelete()
