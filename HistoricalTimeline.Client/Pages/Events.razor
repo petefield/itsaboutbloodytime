@@ -185,12 +185,12 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label" for="start-date">Start date</label>
-                                <InputText id="start-date" class="form-control" @bind-Value="form.StartDate" placeholder="YYYY-MM-DD or -1599-01-01" />
+                                <HistoricalDatePicker Id="start-date" class="form-control" @bind-Value="form.StartDate" />
                                 <ValidationMessage For="() => form.StartDate" />
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label" for="end-date">End date</label>
-                                <InputText id="end-date" class="form-control" @bind-Value="form.EndDate" placeholder="YYYY-MM-DD or -1599-01-01" />
+                                <HistoricalDatePicker Id="end-date" class="form-control" @bind-Value="form.EndDate" />
                                 <ValidationMessage For="() => form.EndDate" />
                             </div>
                         </div>

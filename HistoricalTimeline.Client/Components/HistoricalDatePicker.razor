@@ -1,0 +1,168 @@
+@inherits InputBase<string>
+
+<div class="historical-date-picker">
+    <div class="input-group">
+        <input id="@Id"
+               class="@CssClass"
+               value="@CurrentValue"
+               placeholder="YYYY-MM-DD or -1599-01-01"
+               @oninput="OnManualInput" />
+        <button class="btn btn-outline-secondary historical-date-picker-toggle"
+                type="button"
+                aria-label="Choose a date"
+                aria-expanded="@isPickerOpen"
+                aria-controls="@($"{Id}-picker")"
+                @onclick="TogglePicker">&#128197;</button>
+    </div>
+
+    @if (isPickerOpen)
+    {
+        <div class="historical-date-picker-panel" id="@($"{Id}-picker")">
+            <div class="historical-date-picker-fields">
+                <label>
+                    Era
+                    <select class="form-select" value="@era" @onchange="ChangeEra">
+                        <option value="CE">CE</option>
+                        <option value="BCE">BCE</option>
+                    </select>
+                </label>
+                <label>
+                    Year
+                    <input class="form-control" type="number" min="1" max="999999" value="@year" @onchange="ChangeYear" />
+                </label>
+                <label>
+                    Month
+                    <select class="form-select" value="@month" @onchange="ChangeMonth">
+                        @for (var monthNumber = 1; monthNumber <= 12; monthNumber++)
+                        {
+                            <option value="@monthNumber">@System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(monthNumber)</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    Day
+                    <select class="form-select" value="@day" @onchange="ChangeDay">
+                        @for (var dayNumber = 1; dayNumber <= DaysInSelectedMonth; dayNumber++)
+                        {
+                            <option value="@dayNumber">@dayNumber</option>
+                        }
+                    </select>
+                </label>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Id { get; set; } = string.Empty;
+
+    private bool isPickerOpen;
+    private string era = "CE";
+    private int year;
+    private int month;
+    private int day;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        SynchronizePicker(Value);
+    }
+
+    protected override bool TryParseValueFromString(
+        string? value,
+        out string result,
+        out string validationErrorMessage)
+    {
+        result = value ?? string.Empty;
+        validationErrorMessage = string.Empty;
+        return true;
+    }
+
+    private int DaysInSelectedMonth
+    {
+        get
+        {
+            for (var candidateDay = 31; candidateDay >= 28; candidateDay--)
+            {
+                if (HistoricalDate.TryParse(BuildDate(candidateDay), out _))
+                {
+                    return candidateDay;
+                }
+            }
+
+            return 28;
+        }
+    }
+
+    private void TogglePicker() => isPickerOpen = !isPickerOpen;
+
+    private void OnManualInput(ChangeEventArgs args)
+    {
+        CurrentValue = args.Value?.ToString() ?? string.Empty;
+        SynchronizePicker(CurrentValue);
+    }
+
+    private void ChangeEra(ChangeEventArgs args)
+    {
+        era = args.Value?.ToString() == "BCE" ? "BCE" : "CE";
+        UpdateDate();
+    }
+
+    private void ChangeYear(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var selectedYear)
+            && selectedYear is >= 1 and <= 999999)
+        {
+            year = selectedYear;
+            UpdateDate();
+        }
+    }
+
+    private void ChangeMonth(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var selectedMonth)
+            && selectedMonth is >= 1 and <= 12)
+        {
+            month = selectedMonth;
+            day = Math.Min(day, DaysInSelectedMonth);
+            UpdateDate();
+        }
+    }
+
+    private void ChangeDay(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var selectedDay)
+            && selectedDay >= 1
+            && selectedDay <= DaysInSelectedMonth)
+        {
+            day = selectedDay;
+            UpdateDate();
+        }
+    }
+
+    private void UpdateDate() => CurrentValue = BuildDate(day);
+
+    private string BuildDate(int selectedDay)
+    {
+        var isoYear = era == "BCE" ? 1 - year : year;
+        var value = isoYear < 0
+            ? $"-{Math.Abs(isoYear):D4}-{month:D2}-{selectedDay:D2}"
+            : $"{isoYear:D4}-{month:D2}-{selectedDay:D2}";
+
+        return HistoricalDate.TryParse(value, out var date) ? date.Text : value;
+    }
+
+    private void SynchronizePicker(string? value)
+    {
+        if (!HistoricalDate.TryParse(value, out var date))
+        {
+            return;
+        }
+
+        era = date.Year <= 0 ? "BCE" : "CE";
+        year = date.Year <= 0 ? 1 - date.Year : date.Year;
+        month = date.Month;
+        day = date.Day;
+    }
+}
