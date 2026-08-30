@@ -1412,6 +1412,11 @@ h1 {
     .timeline-search {
         flex-basis: 0;
     }
+
+    .modal-dialog {
+        max-width: calc(100% - 1rem);
+        margin-inline: 0.5rem;
+    }
 }
 
 .valid.modified:not([type=checkbox]) {
