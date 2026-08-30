@@ -7,6 +7,6 @@ public sealed class HistoricalEvent
     public required string Summary { get; set; }
     public required string Description { get; set; }
     public string? ImageUrl { get; set; }
-    public DateOnly StartDate { get; set; }
-    public DateOnly EndDate { get; set; }
+    public required string StartDate { get; set; }
+    public required string EndDate { get; set; }
 }

@@ -174,25 +174,25 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
         AddRequiredStringError(errors, "summary", summary, 500);
         AddRequiredStringError(errors, "description", description, 5_000);
 
-        var validStartDate = DateOnly.TryParse(form["startDate"], out var startDate);
-        var validEndDate = DateOnly.TryParse(form["endDate"], out var endDate);
+        var validStartDate = HistoricalDate.TryParse(form["startDate"], out var startDate);
+        var validEndDate = HistoricalDate.TryParse(form["endDate"], out var endDate);
         if (!validStartDate)
         {
-            errors["startDate"] = ["A valid start date is required."];
+            errors["startDate"] = ["Use YYYY-MM-DD or a signed BCE date such as -1599-01-01."];
         }
 
         if (!validEndDate)
         {
-            errors["endDate"] = ["A valid end date is required."];
+            errors["endDate"] = ["Use YYYY-MM-DD or a signed BCE date such as -1599-01-01."];
         }
-        else if (validStartDate && endDate < startDate)
+        else if (validStartDate && endDate.Ordinal < startDate.Ordinal)
         {
             errors["endDate"] = ["The end date cannot be before the start date."];
         }
 
         return errors.Count > 0
             ? (null, new BadRequestObjectResult(new { errors }))
-            : (new EventRequest(title, summary, description, startDate, endDate, form.Files.GetFile("image")), null);
+            : (new EventRequest(title, summary, description, startDate.Text, endDate.Text, form.Files.GetFile("image")), null);
     }
 
     private static void AddRequiredStringError(
@@ -218,7 +218,7 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
         string Title,
         string Summary,
         string Description,
-        DateOnly StartDate,
-        DateOnly EndDate,
+        string StartDate,
+        string EndDate,
         IFormFile? Image);
 }

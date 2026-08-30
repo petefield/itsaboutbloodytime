@@ -37,11 +37,11 @@
     else
     {
         <div class="timeline-scrollbar-row">
-            <time class="timeline-range-label" datetime="@timelineStartDate.ToString("yyyy-MM-dd")">@timelineStartDate.ToString("d MMM yyyy")</time>
+            <time class="timeline-range-label" datetime="@timelineStartDate.Text">@HistoricalDate.Display(timelineStartDate.Text)</time>
             <div class="timeline-top-scroll" @ref="topTimelineScroll" aria-label="Timeline horizontal scroll">
                 <div style="@($"width: {timelineWidth}px;")"></div>
             </div>
-            <time class="timeline-range-label timeline-range-label-end" datetime="@timelineEndDate.ToString("yyyy-MM-dd")">@timelineEndDate.ToString("d MMM yyyy")</time>
+            <time class="timeline-range-label timeline-range-label-end" datetime="@timelineEndDate.Text">@HistoricalDate.Display(timelineEndDate.Text)</time>
         </div>
         <div class="timeline-scroll" @ref="timelineScroll">
             <div class="timeline-track" style="@($"width: {timelineWidth}px; min-height: {timelineHeight}px;")">
@@ -50,7 +50,7 @@
                 {
                     <span class="timeline-year @(marker.IsAtStart ? "timeline-year-start" : null)"
                           style="@($"left: {marker.Left:F1}px;")"
-                          aria-hidden="true">@marker.Year</span>
+                          aria-hidden="true">@marker.Label</span>
                 }
                 @foreach (var placement in timelinePlacements)
                 {
@@ -142,8 +142,8 @@
     private string? loadError;
     private int timelineWidth;
     private int timelineHeight;
-    private DateOnly timelineStartDate;
-    private DateOnly timelineEndDate;
+    private HistoricalDate timelineStartDate;
+    private HistoricalDate timelineEndDate;
     private ElementReference topTimelineScroll;
     private ElementReference timelineScroll;
     private IJSObjectReference? timelineScrollModule;
@@ -227,17 +227,26 @@
 
     private void BuildTimelinePlacements()
     {
-        var orderedEvents = events!.OrderBy(historicalEvent => historicalEvent.StartDate).ToArray();
+        var orderedEvents = events!
+            .Select(historicalEvent => new EventDateRange(
+                historicalEvent,
+                ParseDate(historicalEvent.StartDate),
+                ParseDate(historicalEvent.EndDate)))
+            .OrderBy(eventRange => eventRange.StartDate.Ordinal)
+            .ToArray();
         if (orderedEvents.Length == 0)
         {
             return;
         }
 
         var timelineStart = orderedEvents[0].StartDate;
-        var timelineEnd = orderedEvents.Max(historicalEvent => historicalEvent.EndDate);
+        var timelineEnd = orderedEvents
+            .OrderBy(eventRange => eventRange.EndDate.Ordinal)
+            .Last()
+            .EndDate;
         timelineStartDate = timelineStart;
         timelineEndDate = timelineEnd;
-        var durationInDays = Math.Max(1, timelineEnd.DayNumber - timelineStart.DayNumber);
+        var durationInDays = Math.Max(1L, timelineEnd.Ordinal - timelineStart.Ordinal);
         var minimumTimelineWidth = Math.Max(
             MinimumTimelineWidth,
             orderedEvents.Length * MinimumEventSpacing);
@@ -245,10 +254,10 @@
         BuildTimelineYearMarkers(timelineStart, timelineEnd, pixelsPerDay);
         var laneEnds = new List<double>();
 
-        foreach (var (historicalEvent, index) in orderedEvents.Select((historicalEvent, index) => (historicalEvent, index)))
+        foreach (var (eventRange, index) in orderedEvents.Select((eventRange, index) => (eventRange, index)))
         {
-            var left = (historicalEvent.StartDate.DayNumber - timelineStart.DayNumber) * pixelsPerDay;
-            var rangeWidth = Math.Max(4, (historicalEvent.EndDate.DayNumber - historicalEvent.StartDate.DayNumber) * pixelsPerDay);
+            var left = (eventRange.StartDate.Ordinal - timelineStart.Ordinal) * pixelsPerDay;
+            var rangeWidth = Math.Max(4, (eventRange.EndDate.Ordinal - eventRange.StartDate.Ordinal) * pixelsPerDay);
             var lane = laneEnds.FindIndex(end => end <= left);
 
             if (lane < 0)
@@ -262,7 +271,7 @@
             }
 
             timelinePlacements.Add(new TimelinePlacement(
-                historicalEvent,
+                eventRange.Event,
                 lane,
                 left,
                 rangeWidth,
@@ -291,8 +300,8 @@
     }
 
     private void BuildTimelineYearMarkers(
-        DateOnly timelineStart,
-        DateOnly timelineEnd,
+        HistoricalDate timelineStart,
+        HistoricalDate timelineEnd,
         double pixelsPerDay)
     {
         var pixelsPerYear = 365.2425 * pixelsPerDay;
@@ -310,16 +319,24 @@
         {
             var markerDate = year == timelineStart.Year
                 ? timelineStart
-                : new DateOnly(year, 1, 1);
-            var left = (markerDate.DayNumber - timelineStart.DayNumber) * pixelsPerDay;
-            timelineYearMarkers.Add(new TimelineYearMarker(year, left, year == timelineStart.Year));
+                : HistoricalDate.FromYear(year);
+            var left = (markerDate.Ordinal - timelineStart.Ordinal) * pixelsPerDay;
+            timelineYearMarkers.Add(new TimelineYearMarker(
+                HistoricalDate.DisplayYear(year),
+                left,
+                year == timelineStart.Year));
         }
     }
 
     private static string DisplayDateRange(HistoricalEvent historicalEvent) =>
         historicalEvent.StartDate == historicalEvent.EndDate
-            ? historicalEvent.StartDate.ToString("d MMMM yyyy")
-            : $"{historicalEvent.StartDate:d MMMM yyyy} - {historicalEvent.EndDate:d MMMM yyyy}";
+            ? HistoricalDate.Display(historicalEvent.StartDate)
+            : $"{HistoricalDate.Display(historicalEvent.StartDate)} - {HistoricalDate.Display(historicalEvent.EndDate)}";
+
+    private static HistoricalDate ParseDate(string value) =>
+        HistoricalDate.TryParse(value, out var date)
+            ? date
+            : throw new InvalidOperationException($"The timeline contains an invalid date: {value}");
 
     private string ApiUrl(string relativeUrl) => new Uri(Http.BaseAddress!, relativeUrl).ToString();
 
@@ -330,5 +347,11 @@
         double RangeWidth,
         string Colour);
 
-    private sealed record TimelineYearMarker(int Year, double Left, bool IsAtStart);
+    private sealed record EventDateRange(
+        HistoricalEvent Event,
+        HistoricalDate StartDate,
+        HistoricalDate EndDate);
+
+    private sealed record TimelineYearMarker(string Label, double Left, bool IsAtStart);
+
 }

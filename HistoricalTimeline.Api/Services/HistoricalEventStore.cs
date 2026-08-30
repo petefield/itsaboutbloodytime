@@ -12,7 +12,6 @@ namespace HistoricalTimeline.Api.Services;
 public sealed class HistoricalEventStore
 {
     private const string TimelinePartitionKey = "timelines";
-    private static readonly DateOnly EarliestTableStorageDate = new(1601, 1, 1);
     private readonly TableClient eventTable;
     private readonly TableClient timelineTable;
     private readonly BlobContainerClient imageContainer;
@@ -162,7 +161,11 @@ public sealed class HistoricalEventStore
             historicalEvents.Add(ToModel(timelineId, entity));
         }
 
-        return historicalEvents.OrderBy(historicalEvent => historicalEvent.StartDate).ToArray();
+        return historicalEvents
+            .OrderBy(historicalEvent => HistoricalDate.TryParse(historicalEvent.StartDate, out var date)
+                ? date.Ordinal
+                : long.MaxValue)
+            .ToArray();
     }
 
     public async Task<HistoricalEvent?> GetAsync(Guid timelineId, Guid id)
@@ -340,12 +343,16 @@ public sealed class HistoricalEventStore
             ImageBlobName = historicalEvent.ImageUrl is null
                 ? null
                 : Path.GetFileName(historicalEvent.ImageUrl),
-            // Azure Table Storage date-time values begin in 1601, but historical
-            // timelines must support earlier events.
-            StartDate = ToTableStorageDate(historicalEvent.StartDate),
-            EndDate = ToTableStorageDate(historicalEvent.EndDate),
-            StartDateText = historicalEvent.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-            EndDateText = historicalEvent.EndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+            StartDate = null,
+            EndDate = null,
+            StartDateText = historicalEvent.StartDate,
+            EndDateText = historicalEvent.EndDate,
+            StartDateOrdinal = HistoricalDate.TryParse(historicalEvent.StartDate, out var startDate)
+                ? startDate.Ordinal
+                : throw new InvalidOperationException("The event start date is invalid."),
+            EndDateOrdinal = HistoricalDate.TryParse(historicalEvent.EndDate, out var endDate)
+                ? endDate.Ordinal
+                : throw new InvalidOperationException("The event end date is invalid.")
         };
 
     private static HistoricalEvent ToModel(Guid timelineId, HistoricalEventEntity entity) =>
@@ -358,30 +365,33 @@ public sealed class HistoricalEventStore
             ImageUrl = entity.ImageBlobName is null
                 ? null
                 : $"/api/timelines/{timelineId:N}/historical-events/images/{entity.ImageBlobName}",
-            StartDate = ToDateOnly(entity.StartDateText, entity.StartDate),
-            EndDate = ToDateOnly(entity.EndDateText, entity.EndDate)
+            StartDate = ToDateText(entity.StartDateText, entity.StartDate),
+            EndDate = ToDateText(entity.EndDateText, entity.EndDate)
         };
 
-    private static DateTime? ToTableStorageDate(DateOnly date) =>
-        date < EarliestTableStorageDate
-            ? null
-            : date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-
-    private static DateOnly ToDateOnly(string? textDate, DateTime? legacyDate)
+    private static string ToDateText(string? textDate, DateTimeOffset? legacyDate)
     {
-        if (DateOnly.TryParseExact(
-                textDate,
-                "yyyy-MM-dd",
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.None,
-                out var date))
+        if (HistoricalDate.TryParse(textDate, out var date))
         {
-            return date;
+            return date.Text;
+        }
+
+        if (TryParseLegacyBceYear(textDate, out date))
+        {
+            return date.Text;
         }
 
         return legacyDate is not null
-            ? DateOnly.FromDateTime(legacyDate.Value)
+            ? legacyDate.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
             : throw new InvalidOperationException("The stored event is missing a date.");
+    }
+
+    private static bool TryParseLegacyBceYear(string? value, out HistoricalDate date)
+    {
+        date = default;
+        return value is { Length: >= 5 and <= 7 }
+            && value[0] == '-'
+            && HistoricalDate.TryParse($"{value}-01-01", out date);
     }
 
     private static TimelineTopic ToModel(TimelineTopicEntity entity) =>
