@@ -725,7 +725,8 @@ h1 {
 }
 
 .event-table-surface {
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
     border: 1px solid #cfe0fb;
     border-radius: 1.15rem;
     background: #fff;
@@ -808,6 +809,10 @@ h1 {
     grid-template-columns: 1fr;
     gap: 1.5rem;
     align-items: start;
+}
+
+.event-editor-columns > * {
+    min-width: 0;
 }
 
 .event-editor-columns-selected {
