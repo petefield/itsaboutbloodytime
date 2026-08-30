@@ -78,8 +78,8 @@
                                     tabindex="0"
                                     @onclick="() => SelectEvent(historicalEvent.Id)"
                                     @onkeydown="(args) => SelectEventOnKeyDown(args, historicalEvent.Id)">
-                                    <td class="event-date">@historicalEvent.StartDate.ToString("d MMM yyyy")</td>
-                                    <td class="event-date">@historicalEvent.EndDate.ToString("d MMM yyyy")</td>
+                                    <td class="event-date">@HistoricalDate.Display(historicalEvent.StartDate)</td>
+                                    <td class="event-date">@HistoricalDate.Display(historicalEvent.EndDate)</td>
                                     <td>
                                         <div class="event-title">
                                             @if (historicalEvent.ImageUrl is not null)
@@ -167,11 +167,12 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label" for="start-date">Start date</label>
-                                <InputDate id="start-date" class="form-control" @bind-Value="form.StartDate" />
+                                <InputText id="start-date" class="form-control" @bind-Value="form.StartDate" placeholder="YYYY-MM-DD or -1599-01-01" />
+                                <ValidationMessage For="() => form.StartDate" />
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label" for="end-date">End date</label>
-                                <InputDate id="end-date" class="form-control" @bind-Value="form.EndDate" />
+                                <InputText id="end-date" class="form-control" @bind-Value="form.EndDate" placeholder="YYYY-MM-DD or -1599-01-01" />
                                 <ValidationMessage For="() => form.EndDate" />
                             </div>
                         </div>
@@ -419,8 +420,8 @@
         content.Add(new StringContent(form.Title), "title");
         content.Add(new StringContent(form.Summary), "summary");
         content.Add(new StringContent(form.Description), "description");
-        content.Add(new StringContent(form.StartDate.ToString("yyyy-MM-dd")), "startDate");
-        content.Add(new StringContent(form.EndDate.ToString("yyyy-MM-dd")), "endDate");
+        content.Add(new StringContent(form.StartDate), "startDate");
+        content.Add(new StringContent(form.EndDate), "endDate");
         if (selectedImage is not null)
         {
             var imageContent = new StreamContent(selectedImage.OpenReadStream(MaximumImageSize));
@@ -676,8 +677,8 @@
 
     private static string DisplayDateRange(HistoricalEvent historicalEvent) =>
         historicalEvent.StartDate == historicalEvent.EndDate
-            ? historicalEvent.StartDate.ToString("d MMMM yyyy")
-            : $"{historicalEvent.StartDate:d MMMM yyyy} - {historicalEvent.EndDate:d MMMM yyyy}";
+            ? HistoricalDate.Display(historicalEvent.StartDate)
+            : $"{HistoricalDate.Display(historicalEvent.StartDate)} - {HistoricalDate.Display(historicalEvent.EndDate)}";
 
     private string ApiUrl(string relativeUrl) => new Uri(Http.BaseAddress!, relativeUrl).ToString();
 }

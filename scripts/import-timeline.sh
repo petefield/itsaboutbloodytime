@@ -28,6 +28,8 @@ Creates a timeline and imports every CSV row as an event. The CSV must contain:
 
 The optional image_url column may contain an HTTP(S) URL, a file:// URL, or a
 path relative to the CSV file. Each image is uploaded with its event.
+Dates use YYYY-MM-DD for CE and BCE dates. Prefix a BCE year with a minus
+sign, such as -1599-01-01 for 1600 BCE.
 Downloaded HTTP(S) images are retained beside the CSV using the CSV filename
 and event number.
 Images larger than 5 MB are resized and compressed to fit the upload limit.
@@ -90,13 +92,38 @@ trap 'rm -rf -- "$temporary_directory"' EXIT
 records_file="$temporary_directory/events.jsonl"
 progress "Reading and validating CSV: $csv_filename"
 python3 - "$csv_path" >"$records_file" <<'PYTHON'
+import calendar
 import csv
 import json
+import re
 import sys
-from datetime import date
 
 csv_path = sys.argv[1]
 required_columns = {"start_date", "end_date", "title", "summary", "full_description"}
+date_pattern = re.compile(
+    r"^(?P<year>-\d{4,6}|\d{4})-(?P<month>\d{2})-(?P<day>\d{2})(?:T00:00:00(?:Z)?)?$"
+)
+
+
+def parse_historical_date(value):
+    match = date_pattern.fullmatch(value.strip())
+    if not match:
+        raise ValueError("use YYYY-MM-DD or a signed BCE date such as -1599-01-01")
+
+    year = int(match["year"])
+    month = int(match["month"])
+    day = int(match["day"])
+    if not 1 <= month <= 12:
+        raise ValueError("month must be between 01 and 12")
+
+    is_leap_year = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+    days_in_month = 29 if month == 2 and is_leap_year else calendar.monthrange(2023, month)[1]
+    if not 1 <= day <= days_in_month:
+        raise ValueError("day is not valid for this month")
+
+    normalized_year = f"-{abs(year):04d}" if year < 0 else f"{year:04d}"
+    normalized_date = f"{normalized_year}-{month:02d}-{day:02d}"
+    return normalized_date, (year, month, day)
 
 with open(csv_path, encoding="utf-8-sig", newline="") as source:
     reader = csv.DictReader(source)
@@ -119,12 +146,12 @@ with open(csv_path, encoding="utf-8-sig", newline="") as source:
                 raise SystemExit(f"Row {row_number} has an empty {field}.")
 
         try:
-            event["start_date"] = date.fromisoformat(row["start_date"].strip()[:10]).isoformat()
-            event["end_date"] = date.fromisoformat(row["end_date"].strip()[:10]).isoformat()
+            event["start_date"], start_date_value = parse_historical_date(row["start_date"])
+            event["end_date"], end_date_value = parse_historical_date(row["end_date"])
         except ValueError as error:
             raise SystemExit(f"Row {row_number} has an invalid date: {error}") from error
 
-        if event["end_date"] < event["start_date"]:
+        if end_date_value < start_date_value:
             raise SystemExit(f"Row {row_number} ends before it starts.")
 
         print(json.dumps(event, ensure_ascii=False))
