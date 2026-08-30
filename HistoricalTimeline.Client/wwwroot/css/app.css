@@ -810,6 +810,45 @@ h1 {
     align-items: start;
 }
 
+.date-entry-section {
+    margin-bottom: 0.75rem;
+}
+
+.date-entry-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.date-help-button {
+    display: grid;
+    width: 1.3rem;
+    height: 1.3rem;
+    padding: 0;
+    place-items: center;
+    border: 1px solid #6295df;
+    border-radius: 50%;
+    background: #fff;
+    color: #176ee9;
+    font-family: Georgia, serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.date-help-button:hover,
+.date-help-button:focus-visible {
+    background: #eaf2ff;
+    color: #073b8f;
+}
+
+.date-entry-help {
+    margin: 0.5rem 0 0;
+    color: #566b93;
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
 .event-editor-columns-selected {
     grid-template-columns: minmax(0, 1.25fr) minmax(20rem, 0.75fr);
 }
