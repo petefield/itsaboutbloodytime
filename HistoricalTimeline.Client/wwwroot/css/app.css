@@ -850,6 +850,42 @@ h1 {
     line-height: 1.55;
 }
 
+.historical-date-picker {
+    position: relative;
+}
+
+.historical-date-picker-toggle {
+    min-width: 2.75rem;
+}
+
+.historical-date-picker-panel {
+    margin-top: 0.5rem;
+    padding: 1rem;
+    border: 1px solid #cfe0fb;
+    border-radius: 0.5rem;
+    background: #f8fbff;
+}
+
+.historical-date-picker-fields {
+    display: grid;
+    grid-template-columns: minmax(5rem, 0.8fr) minmax(6rem, 1fr) minmax(8rem, 1.5fr) minmax(4.5rem, 0.7fr);
+    gap: 0.75rem;
+}
+
+.historical-date-picker-fields label {
+    display: grid;
+    gap: 0.3rem;
+    color: #365783;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+@media (max-width: 768px) {
+    .historical-date-picker-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 .event-editor-columns > * {
     min-width: 0;
 }
