@@ -45,7 +45,7 @@ public sealed class TimelinesFunctions(HistoricalEventStore eventStore)
         }
         catch (HistoricalEventStore.ImageValidationException exception)
         {
-            return ValidationError("image", exception.Message);
+            return ValidationHelper.ValidationError("image", exception.Message);
         }
     }
 
@@ -87,7 +87,7 @@ public sealed class TimelinesFunctions(HistoricalEventStore eventStore)
         }
         catch (HistoricalEventStore.ImageValidationException exception)
         {
-            return ValidationError("image", exception.Message);
+            return ValidationHelper.ValidationError("image", exception.Message);
         }
     }
 
@@ -124,31 +124,12 @@ public sealed class TimelinesFunctions(HistoricalEventStore eventStore)
         var title = form["title"].ToString().Trim();
         var description = form["description"].ToString().Trim();
 
-        AddRequiredStringError(errors, "title", title, 200);
-        AddRequiredStringError(errors, "description", description, 500);
+        ValidationHelper.AddRequiredStringError(errors, "title", title, 200);
+        ValidationHelper.AddRequiredStringError(errors, "description", description, 500);
 
         return errors.Count > 0
             ? (null, new BadRequestObjectResult(new { errors }))
             : (new TimelineRequest(title, description, form.Files.GetFile("image")), null);
-    }
-
-    private static IActionResult ValidationError(string field, string message) =>
-        new BadRequestObjectResult(new { errors = new Dictionary<string, string[]> { [field] = [message] } });
-
-    private static void AddRequiredStringError(
-        IDictionary<string, string[]> errors,
-        string name,
-        string value,
-        int maximumLength)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            errors[name] = [$"{name} is required."];
-        }
-        else if (value.Length > maximumLength)
-        {
-            errors[name] = [$"{name} cannot exceed {maximumLength} characters."];
-        }
     }
 
     private sealed record TimelineRequest(string Title, string Description, IFormFile? Image);

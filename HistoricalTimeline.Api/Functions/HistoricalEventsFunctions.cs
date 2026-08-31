@@ -1,4 +1,3 @@
-using Azure.Storage.Blobs.Models;
 using HistoricalTimeline.Api.Models;
 using HistoricalTimeline.Api.Services;
 using Microsoft.AspNetCore.Http;
@@ -73,7 +72,7 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
         }
         catch (HistoricalEventStore.ImageValidationException exception)
         {
-            return ValidationError("image", exception.Message);
+            return ValidationHelper.ValidationError("image", exception.Message);
         }
     }
 
@@ -125,7 +124,7 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
         }
         catch (HistoricalEventStore.ImageValidationException exception)
         {
-            return ValidationError("image", exception.Message);
+            return ValidationHelper.ValidationError("image", exception.Message);
         }
     }
 
@@ -170,9 +169,9 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
         var summary = form["summary"].ToString().Trim();
         var description = form["description"].ToString().Trim();
 
-        AddRequiredStringError(errors, "title", title, 200);
-        AddRequiredStringError(errors, "summary", summary, 500);
-        AddRequiredStringError(errors, "description", description, 5_000);
+        ValidationHelper.AddRequiredStringError(errors, "title", title, 200);
+        ValidationHelper.AddRequiredStringError(errors, "summary", summary, 500);
+        ValidationHelper.AddRequiredStringError(errors, "description", description, 5_000);
 
         var validStartDate = HistoricalDate.TryParse(form["startDate"], out var startDate);
         var validEndDate = HistoricalDate.TryParse(form["endDate"], out var endDate);
@@ -194,25 +193,6 @@ public sealed class HistoricalEventsFunctions(HistoricalEventStore eventStore)
             ? (null, new BadRequestObjectResult(new { errors }))
             : (new EventRequest(title, summary, description, startDate.Text, endDate.Text, form.Files.GetFile("image")), null);
     }
-
-    private static void AddRequiredStringError(
-        IDictionary<string, string[]> errors,
-        string name,
-        string value,
-        int maximumLength)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            errors[name] = [$"{name} is required."];
-        }
-        else if (value.Length > maximumLength)
-        {
-            errors[name] = [$"{name} cannot exceed {maximumLength} characters."];
-        }
-    }
-
-    private static IActionResult ValidationError(string field, string message) =>
-        new BadRequestObjectResult(new { errors = new Dictionary<string, string[]> { [field] = [message] } });
 
     private sealed record EventRequest(
         string Title,
