@@ -35,7 +35,7 @@ The API is built on the [Azure Functions isolated worker model](https://learn.mi
 | DELETE | `/api/timelines/{id}/historical-events/{eventId}` | Delete an event |
 | GET | `/api/timelines/{id}/historical-events/images/{blob}` | Download an event image |
 
-Create and update endpoints accept `multipart/form-data` requests. Date fields use `YYYY-MM-DD` for CE dates and a signed year prefix for BCE dates (e.g. `-1599-01-01` for 1600 BCE).
+Create and update endpoints accept `multipart/form-data` requests. Date fields use `YYYY-MM-DD` for CE dates and a signed year prefix for BCE dates using astronomical year numbering, where year 0 corresponds to 1 BCE (e.g. `-1599-01-01` for 1600 BCE).
 
 Data is stored in Azure Table Storage and images are stored in Azure Blob Storage.
 
