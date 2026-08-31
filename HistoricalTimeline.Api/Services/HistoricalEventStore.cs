@@ -402,7 +402,7 @@ public sealed class HistoricalEventStore
             Description = entity.Description,
             ImageUrl = entity.ImageBlobName is null
                 ? null
-                : $"/api/timelines/{entity.RowKey}/images/{entity.ImageBlobName}"
+                : $"/api/timelines/{Guid.ParseExact(entity.RowKey, "N"):N}/images/{entity.ImageBlobName}"
         };
 
     private static TimelineTopicEntity ToEntity(TimelineTopic timeline) =>
